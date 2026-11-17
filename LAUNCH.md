@@ -27,7 +27,7 @@
 
 ## Optional after launch
 
-- Unlimited practice with separate records.
+- Optional practice history and aggregate difficulty statistics.
 - Export/import personal progress for moving devices.
 - Installable app and offline support.
 

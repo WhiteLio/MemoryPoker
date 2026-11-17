@@ -49,7 +49,7 @@ export function handLabels(groups) {
     const ranks=Array(5);
     for(let i=4;i>=0;i--) {ranks[i]=key%15;key=Math.floor(key/15);}
     const [a,b]=ranks;
-    const base=[`${value(a)} high`,`${value(a)} Pair`,`${value(a)} & ${value(b)} Pairs`,
+    const base=[`${value(a)} high`,`${value(a)} Pair`,`${value(a)} & ${value(b)} Two Pair`,
       `Three ${value(a)}s`,`${value(a)}-high Straight`,`${value(a)}-high Flush`,
       `${value(a)}s full of ${value(b)}s`,`Four ${value(a)}s`,group.name==='Royal flush'?'Royal flush':`${value(a)}-high Straight flush`][group.category];
     return {base,ranks,used:[1,1,2,1,1,1,2,1,1][group.category]};

@@ -79,3 +79,23 @@ See [LAUNCH.md](LAUNCH.md) for the remaining release work.
 Concrete, violet accents, Korean plaques, near-white cards, and dotted backs draw on the supplied show references. Cinzel and a small Noto Serif KR subset are hosted locally. Card faces reuse Byron Knoll's public-domain vector artwork, with sharp Besley vector outlines for the card values. See [THIRD_PARTY.md](THIRD_PARTY.md) for notices and [DESIGN.md](DESIGN.md) for visual direction. No show screenshots or Netflix artwork are included.
 
 This is an independent fan project, not affiliated with or endorsed by Netflix or the show's creators. A source-code license has not yet been selected.
+
+## Endless difficulty review
+
+Choose Endless on the cover, select a weekday difficulty, and enter a seed or use Random seed. Play starts immediately. Next deal advances the seed while keeping the difficulty; Replay seed repeats the same board. Difficulty in the game toolbar reopens the picker. Daily game returns to the daily challenge.
+
+Endless uses separate saved progress and does not affect daily records or streaks. The URL records difficulty and seed for reproducible comparisons. Each seed represents a generated week using the unchanged daily v1 generator; weekdays select that week's exact daily profile. Sunday randomly uses columns or diagonals.
+
+### Experimental obvious answers
+
+Endless has an Answer style picker: Original daily deals or Obvious answer (experimental). The latter constructs a royal flush or four of a kind with exactly one winning selection and at least a two-category gap above the next distinct hand group. It preserves grid size and suit layout, including strict-shuffle restrictions. The style is encoded in the URL and uses separate progress. Daily v1 generation is unchanged. This intentionally narrow prototype tests whether clear high-tier combinations feel easier; it is not a final difficulty curve.
+
+After each endless round, Difficulty review shows the best and second-best categories, category gap, number of winning selections, losing pairs in the best category, and shared cards contributing to one best combination (excluding kickers). These are diagnostic signals, not a validated difficulty score. No answers or metrics appear before the result.
+
+### Independent practice controls
+
+The Endless picker now defaults to independent controls: 8/12/16 cards; columns, rows, diagonals, blocks, mirrored pairs, rings, spiral, or shuffled arrangement; and Very clear, Clear, Competing, or Unrestricted answer clarity. Weekday suggestions fill these controls but do not change the daily schedule. Original daily profiles and the earlier royal-flush/quads experiment remain available under Original daily / early experiment.
+
+Very clear requires a unique winning pair, trips or better, and a category gap of at least two. Clear requires trips or better and a category gap of at least one. Competing requires at least two distinct hand strengths in the winning category. Unrestricted has no clarity filter. Candidate targets include royal flushes, quads, full houses, flushes, straights, trips, and random hands. Actual distributions depend on card count and suit pattern; these controls are experimental constraints, not validated difficulty ratings or a promise of equal hand-category frequency.
+
+Practice deals use their own deterministic generator and storage keyed by the complete settings. Suit identities are shuffled per seed. Rank positions are shuffled within each suit, so the winning cards do not occupy a fixed point in a pattern. Next deal retains all controls. Shares include the controls and seed.

@@ -89,3 +89,26 @@ body[data-screen=opening] .welcome {
   .welcome-description { font-size: 16px; }
   .welcome footer { gap: var(--space-1); }
 }
+
+.welcome #edition,
+.welcome #next-deal {
+  color: color-mix(in srgb, var(--ivory) 60%, black);
+}
+
+.endless-entry-actions{display:flex;justify-content:center;gap:8px;margin-top:-16px;color:var(--text-muted)}
+.endless-form{display:grid;gap:12px;font:var(--type-body)}
+.endless-form label{color:var(--text-muted)}
+.endless-form select,.endless-form input{width:100%;min-height:44px;padding:8px 10px;border:1px solid #827096;border-radius:3px;background:#17111f;color:var(--ivory);font:var(--type-body)}
+.endless-form .text-button{justify-self:start}
+.endless-result-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+.endless-result-actions .secondary{margin:0}
+.endless-result-actions .text-button{grid-column:1/-1;color:var(--text-muted)}
+#endless-tools{display:flex;align-items:center}
+#endless-tools .text-button{font:var(--type-caption);padding-inline:6px}
+
+.difficulty-review{margin-top:24px;font:var(--type-caption);color:var(--text-muted)}
+.difficulty-review summary{color:var(--ivory)}
+.difficulty-review dl{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.difficulty-review dd{margin:0;text-align:right;color:var(--ivory)}
+
+#lab-fields,#legacy-fields{display:grid;gap:12px}

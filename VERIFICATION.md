@@ -84,3 +84,7 @@ The compact interface revision was checked against the live Wordle landing scree
 - Background deadline auto-submission is covered by pure transition tests; end-to-end browser testing exercised the away-to-overtime path.
 - No public repository or GitHub Pages deployment has been created. The local preview is a development server.
 - The launch epoch, license, and any future generator version activation policy remain release decisions.
+
+## Independent difficulty lab
+
+23 automated tests pass. Practice coverage exercises all 96 card-count/pattern/clarity combinations for validity, deterministic generation, exact suit-pattern grouping, and requested category gaps; seven suggested presets are additionally exercised across seven seeds. Daily generator code is unchanged. Browser verification checks are recorded separately from these generation tests.

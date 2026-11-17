@@ -1,3 +1,6 @@
+import {PATTERNS,CLARITIES,PRESETS,practiceSettings,practiceKey,generatePractice} from './practice.js';
+import {generateClear,difficultyMetrics} from './difficulty.js';
+import {DIFFICULTIES,MAX_SEED,endlessNumber,endlessSettings} from './endless.js';
 import {generate, challengeNumber} from './generator.js';
 import {face, suit, SUITS, cardText, evaluate, handGroups, handLabels} from './poker.js';
 import {newAttempt, ready, advance, selectCard, submit, deadline, formatTime, shareText, shouldReplaceDeal, formatNextDeal} from './state.js';
@@ -8,17 +11,22 @@ import {EASE_OUT_QUAD,newAttemptAfterIntro} from './intro.js';
 const $=id=>document.getElementById(id);
 const localDevelopment=['localhost','127.0.0.1','[::1]'].includes(location.hostname);
 const testMode=localDevelopment&&new URLSearchParams(location.search).get('test')==='16';
-const KEY=testMode?'memory-poker:test-attempts:v1':'memory-poker:attempts:v1';
+const endlessMode=new URLSearchParams(location.search).get('mode')==='endless';
+const endless=endlessSettings(location.search);
+const lab=endlessMode?practiceSettings(location.search):null;
+const clearMode=endlessMode&&new URLSearchParams(location.search).get('answers')==='clear';
+const practiceGenerate=number=>lab?generatePractice(number,lab):clearMode?generateClear(number):generate(number);
+const KEY=lab?`memory-poker:lab:v1:${practiceKey(lab)}`:endlessMode?(clearMode?'memory-poker:clear-attempts:v1':'memory-poker:endless-attempts:v1'):testMode?'memory-poker:test-attempts:v1':'memory-poker:attempts:v1';
 const PREFERENCES_KEY='memory-poker:preferences:v1';
 let includeLink=true;
 try {includeLink=JSON.parse(localStorage.getItem(PREFERENCES_KEY) || '{}').includeLink!==false;} catch { /* Defaults remain usable without storage. */ }
 let attempts={}, storageOK=true, storageWarning='';
 function validAttempt(s,key) {
-  return s && s.number===Number(key) && Number.isInteger(s.number) && s.number>0 && s.number<=(testMode?1000000:challengeNumber()) && s.version===1 &&
+  return s && s.number===Number(key) && Number.isInteger(s.number) && s.number>0 && s.number<=(testMode||endlessMode?1000000:challengeNumber()) && s.version===1 &&
     ['memorize','conceal','select','complete'].includes(s.phase) && Number.isFinite(s.startedAt) &&
     (s.phase==='memorize' || Number.isFinite(s.memorizedAt)) &&
     Array.isArray(s.selected) && s.selected.length<=2 && new Set(s.selected).size===s.selected.length &&
-    s.selected.every(i=>Number.isInteger(i) && i>=0 && i<generate(s.number).board.length) &&
+    s.selected.every(i=>Number.isInteger(i) && i>=0 && i<(lab?lab.count:generate(s.number).board.length)) &&
     (s.phase!=='complete' || (s.selected.length===2 && Number.isFinite(s.completedAt))) &&
     typeof s.overtime==='boolean' && (s.hiddenSince===null || Number.isFinite(s.hiddenSince));
 }
@@ -35,10 +43,10 @@ try {
   storageWarning='Progress cannot be saved in this browser.';
 }
 let observedDay=Math.max(1,challengeNumber());
-if(!testMode) for(const [number,attempt] of Object.entries(attempts)) {
+if(!testMode&&!endlessMode) for(const [number,attempt] of Object.entries(attempts)) {
   if(Number(number)!==observedDay&&attempt.phase!=='complete') delete attempts[number];
 }
-let activeNumber=testMode?6:observedDay, deal=generate(activeNumber), state=attempts[activeNumber] || null;
+let activeNumber=endlessMode?endlessNumber(lab?0:endless.profile,endless.seed):testMode?6:observedDay, deal=practiceGenerate(activeNumber), state=attempts[activeNumber] || null;
 let assetsReady=false;
 let playing=false;
 let introRunning=false;
@@ -69,6 +77,14 @@ function render() {
   const previousBoardTop=$('board').getBoundingClientRect().top;
   const oldFocus=document.activeElement?.dataset.position;
   $('edition').textContent=`#${activeNumber} · ${new Date(deal.date+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'})}`;
+  if(endlessMode) $('edition').textContent=`${lab?CLARITIES[lab.clarity]:clearMode?'Obvious answer':'Endless'} · Seed ${endless.seed}`;
+  $('next-deal').hidden=endlessMode;
+  $('records').hidden=endlessMode;
+  $('puzzle-records').hidden=endlessMode;
+  $('endless-entry').textContent=endlessMode?'Change difficulty':'Endless';
+  $('daily-entry').hidden=!endlessMode;
+  $('endless-tools').hidden=!endlessMode;
+  document.querySelector('.game').setAttribute('aria-label',endlessMode?'Endless challenge':'Daily challenge');
   $('welcome').hidden=playing&&!introRunning;
   document.querySelector('.game').hidden=false;
   document.querySelector('.game').inert=!playing||introRunning;
@@ -79,9 +95,11 @@ function render() {
   $('enter-game').innerHTML=state?(phase==='complete'?'View result':'<span>Continue</span><span aria-hidden="true">·</span><span id="continue-clock" class="timer-readout"></span>'):'Play';
   $('enter-game').disabled=!assetsReady||introRunning;
   $('difficulty').textContent=`${new Date(deal.date+'T12:00:00Z').toLocaleDateString('en',{weekday:'long',timeZone:'UTC'})} · ${deal.board.length} cards`;
+  if(endlessMode) $('difficulty').textContent=lab?`${lab.count} cards · ${PATTERNS[lab.pattern]} · ${CLARITIES[lab.clarity]}`:DIFFICULTIES[endless.profile];
   const text={intro:['','Memorise',''],opening:['','Memorise',''],memorize:['','Memorise',''],conceal:['','Choose 2',''],select:['','Choose 2',''],complete:['','Results','']}[phase];
   $('phase-label').textContent=text[0]; $('instruction').textContent=text[1]; $('detail').textContent=text[2];
   $('phase-label').hidden=!text[0]; $('detail').hidden=!text[2];
+  if(endlessMode) {$('phase-label').textContent=`${lab?`${lab.count} cards · ${PATTERNS[lab.pattern]}`:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][endless.profile]} · Seed ${endless.seed}`;$('phase-label').hidden=false;}
   $('community').hidden=!playing||!['select','complete'].includes(phase);
   $('community-cards').innerHTML=['select','complete'].includes(phase)?deal.community.map(c=>cardHTML(c,-1)).join(''):'';
   const concealed=!playing||['conceal','select','intro'].includes(phase);
@@ -178,8 +196,10 @@ function renderResults() {
   const {hand,place,ms}=resultInfo();
   const labels=handLabels(groups.slice(0,3));
   const resultLabel=handLabels([hand])[0];
+  const metrics=endlessMode?difficultyMetrics(deal.board,deal.community):null;
+  const review=metrics?`<details class="difficulty-review" open><summary>Difficulty review</summary><dl><dt>Best → second</dt><dd>${metrics.best} → ${metrics.second}</dd><dt>Category gap</dt><dd>${metrics.categoryGap} ${metrics.categoryGap===1?'tier':'tiers'}</dd><dt>Winning pairs</dt><dd>${metrics.winningPairs} / ${metrics.totalPairs}</dd><dt>Same-category rivals</dt><dd>${metrics.sameCategoryPairs} pairs</dd><dt>Shared cards in combination</dt><dd>${metrics.sharedContributors} / 3</dd></dl><p>A larger category gap is a clarity signal, not a measured difficulty score.</p></details>`:'';
   const placing=place===1?'Best hand':`${place===2?'2nd':place===3?'3rd':`#${place}`} best hand`;
-  $('results').innerHTML=`<div class="result-card"><div class="result-medal">${badge(place)}</div><div><p class="eyebrow">${placing}${state.overtime?' · OVERTIME':''}</p><h2>${resultLabel}</h2><p class="memorized-time">memorized in ${formatTime(ms)}</p></div></div><div class="result-actions"><button id="copy-result" class="secondary">Copy result</button><button id="share" class="primary">Share <svg class="share-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10H5v11h14V10h-3M12 15V3m-4 4 4-4 4 4"/></svg></button></div><label class="checkbox-label share-link-option"><input id="include-link" type="checkbox" ${includeLink?'checked':''}> Include link</label><div class="section-divider"><span>BEST HANDS</span></div><div class="best-hands">${groups.slice(0,3).map((g,i)=>`<details ${i===0?'open':''}><summary><span>${badge(i+1)} ${labels[i]}</span><span>${g.pairs.length} ${g.pairs.length===1?'pair':'pairs'} <svg class="pairs-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></summary><div class="pair-list">${g.pairs.map(pair=>`<div class="pair"><b>${pair.map(p=>String.fromCharCode(65+p)).join(' + ')}</b><span>${pair.map(p=>`<span class="${[1,2].includes(suit(deal.board[p]))?'red':''}">${cardText(deal.board[p])}</span>`).join(' ')}</span></div>`).join('')}</div></details>`).join('')}</div>`;
+  $('results').innerHTML=`${endlessMode?'<div class="endless-result-actions"><button class="primary" id="endless-next">Next deal</button><button class="secondary" id="endless-replay">Replay seed</button><button class="text-button" id="endless-config">Change difficulty</button></div>':''}<div class="result-card"><div class="result-medal">${badge(place)}</div><div><p class="eyebrow">${placing}${state.overtime?' · OVERTIME':''}</p><h2>${resultLabel}</h2><p class="memorized-time">memorized in ${formatTime(ms)}</p></div></div><div class="result-actions"><button id="copy-result" class="secondary">Copy result</button><button id="share" class="primary">Share <svg class="share-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10H5v11h14V10h-3M12 15V3m-4 4 4-4 4 4"/></svg></button></div><label class="checkbox-label share-link-option"><input id="include-link" type="checkbox" ${includeLink?'checked':''}> Include link</label><div class="section-divider"><span>BEST HANDS</span></div><div class="best-hands">${groups.slice(0,3).map((g,i)=>`<details ${i===0?'open':''}><summary><span>${badge(i+1)} ${labels[i]}</span><span>${g.pairs.length} ${g.pairs.length===1?'pair':'pairs'} <svg class="pairs-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></summary><div class="pair-list">${g.pairs.map(pair=>`<div class="pair"><b>${pair.map(p=>String.fromCharCode(65+p)).join(' + ')}</b><span>${pair.map(p=>`<span class="${[1,2].includes(suit(deal.board[p]))?'red':''}">${cardText(deal.board[p])}</span>`).join(' ')}</span></div>`).join('')}</div></details>`).join('')}</div>${review}`;
 }
 function renderUnfinished() {$('unfinished').hidden=true;}
 function reconcile(options={}) {
@@ -194,7 +214,7 @@ function switchDeal(number) {
   save();render();window.scrollTo({top:0,behavior:'instant'});
 }
 function refreshDaily({away=false}={}) {
-  if(testMode) return false;
+  if(testMode||endlessMode) return false;
   const today=Math.max(1,challengeNumber());
   if(!shouldReplaceDeal(activeNumber,today,{away,activeSession:playing&&!!state})) return false;
   for(const [number,attempt] of Object.entries(attempts)) {
@@ -212,6 +232,10 @@ document.addEventListener('click',event=>{
   const button=event.target.closest('button'); if(!button) return;
   if(introRunning) return;
   reconcile();
+  if(['endless-entry','endless-config','endless-toolbar'].includes(button.id)) openEndless();
+  if(button.id==='daily-entry') location.href='./';
+  if(button.id==='endless-next'||button.id==='endless-skip') goEndless(endless.profile,endless.seed===MAX_SEED?1:endless.seed+1);
+  if(button.id==='endless-replay') {delete attempts[activeNumber];state=null;playing=false;save();lastPhase='';render();void enterGame();}
   if(button.id==='enter-game') {
     void enterGame();
   }
@@ -278,6 +302,34 @@ function openModal(title,html,{fullScreen=false}={}) {
 function openHelp() {
   openModal("How to play",helpHTML()+(localDevelopment?`<details class="help-development"><summary>Development</summary><button id="reset-test" class="secondary">Reset this attempt</button><p><a href="${testMode?"./":"?test=16"}">${testMode?"Daily game":"Try 16 cards"}</a></p></details>`:""),{fullScreen:true});
 }
+function goEndless(profile,seed,answers=clearMode?'clear':'standard',settings=lab) {
+  if(settings) profile=0;
+  endlessNumber(profile,seed);
+  const params=new URLSearchParams({mode:'endless',difficulty:String(profile),seed:String(seed),answers,play:'1'});
+  if(settings) {params.set('cards',settings.count);params.set('pattern',settings.pattern);params.set('clarity',settings.clarity);}
+  if(endlessMode&&((lab&&settings&&practiceKey(lab)===practiceKey(settings))||(!lab&&!settings&&answers===(clearMode?'clear':'standard')))) {delete attempts[endlessNumber(profile,seed)];save();}
+  location.href=`?${params}`;
+}
+function openEndless() {
+  const current=lab||PRESETS[endless.profile];
+  const options=(items,value)=>Object.entries(items).map(([key,label])=>`<option value="${key}" ${String(key)===String(value)?'selected':''}>${label}</option>`).join('');
+  openModal('Endless',`<form id="endless-form" class="endless-form"><p>Mix memory load, suit patterns, and answer clarity. Daily records stay separate.</p><label for="practice-preset">Starting point</label><select id="practice-preset"><option value="custom">Custom</option>${PRESETS.map((p,i)=>`<option value="${i}">${p.name} suggestion</option>`).join('')}<option value="legacy">Original daily / early experiment</option></select><div id="lab-fields"><label for="practice-count">Cards</label><select id="practice-count">${options({8:'8 cards',12:'12 cards',16:'16 cards'},current.count)}</select><label for="practice-pattern">Arrangement</label><select id="practice-pattern">${options(PATTERNS,current.pattern)}</select><label for="practice-clarity">Answer clarity</label><select id="practice-clarity">${options(CLARITIES,current.clarity)}</select></div><div id="legacy-fields" hidden><label for="endless-difficulty">Difficulty</label><select id="endless-difficulty">${DIFFICULTIES.map((label,i)=>`<option value="${i}" ${i===endless.profile?'selected':''}>${label}</option>`).join('')}</select><label for="endless-answers">Answer style</label><select id="endless-answers"><option value="clear" ${clearMode?'selected':''}>Original obvious-answer experiment</option><option value="standard" ${!clearMode?'selected':''}>Original daily deals</option></select></div><label for="endless-seed">Seed</label><input id="endless-seed" type="number" inputmode="numeric" min="1" max="${MAX_SEED}" value="${endless.seed}" required><button type="button" id="random-seed" class="text-button">Random seed</button><button type="submit" class="primary">Play</button></form>`);
+  $('practice-preset').addEventListener('change',()=>{
+    const value=$('practice-preset').value,legacy=value==='legacy';
+    $('lab-fields').hidden=legacy;$('legacy-fields').hidden=!legacy;
+    if(PRESETS[value]) {const p=PRESETS[value];$('practice-count').value=p.count;$('practice-pattern').value=p.pattern;$('practice-clarity').value=p.clarity;}
+  });
+  for(const id of ['practice-count','practice-pattern','practice-clarity']) $(id).addEventListener('change',()=>{$('practice-preset').value='custom';});
+  $('random-seed').addEventListener('click',()=>{$('endless-seed').value=1+Math.floor(Math.random()*MAX_SEED);});
+  $('endless-form').addEventListener('submit',event=>{
+    event.preventDefault();
+    const settings=$('practice-preset').value==='legacy'?null:{count:Number($('practice-count').value),pattern:$('practice-pattern').value,clarity:$('practice-clarity').value};
+    const profile=Number($('endless-difficulty').value),seed=Number($('endless-seed').value),answers=$('endless-answers').value;
+    if(endlessMode&&profile===endless.profile&&seed===endless.seed&&((lab&&settings&&practiceKey(lab)===practiceKey(settings))||(!lab&&!settings&&answers===(clearMode?'clear':'standard')))) {
+      delete attempts[activeNumber];state=null;playing=false;save();lastPhase='';$('modal').close();render();void enterGame();
+    } else goEndless(profile,seed,answers,settings);
+  });
+}
 function recordSummary() {
   const completed=Object.values(attempts).filter(s=>s.phase==='complete');
   const days=completed.map(s=>s.number).sort((a,b)=>a-b);
@@ -305,9 +357,13 @@ function renderRecords() {
 const copyFeedback=new WeakMap();
 async function share(useNative=true) {
   const button=$(useNative?'share':'copy-result');
-  const url=includeLink?new URL('./',location.href).href:'';
+  const shareURL=new URL('./',location.href);
+  if(endlessMode) shareURL.search=new URLSearchParams({mode:'endless',difficulty:String(endless.profile),seed:String(endless.seed),answers:clearMode?'clear':'standard'}).toString();
+  if(lab) {shareURL.searchParams.set('cards',lab.count);shareURL.searchParams.set('pattern',lab.pattern);shareURL.searchParams.set('clarity',lab.clarity);}
+  const url=includeLink?shareURL.href:'';
   const {place,ms}=resultInfo();
   let text=shareText(activeNumber,place,ms,state.overtime,url);
+  if(endlessMode) text=text.replace(`Memory Poker #${activeNumber}`,`Memory Poker · Endless · ${lab?`${lab.count} cards · ${PATTERNS[lab.pattern]} · ${CLARITIES[lab.clarity]}`:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][endless.profile]} · Seed ${endless.seed}`);
   if(testMode) text=text.replace(`Memory Poker #${activeNumber}`,'Memory Poker · Test');
   if(useNative && navigator.share) {
     try {
@@ -356,4 +412,4 @@ setInterval(()=>{
   reconcile();updateClock();
 },100);
 save();render();
-void preloadCards([...deal.board,...deal.community]).then(()=>{assetsReady=true;render();});
+void preloadCards([...deal.board,...deal.community]).then(()=>{assetsReady=true;render();if(endlessMode&&new URLSearchParams(location.search).get('play')==='1') void enterGame();});
