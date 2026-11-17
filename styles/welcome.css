@@ -112,3 +112,33 @@ body[data-screen=opening] .welcome {
 .difficulty-review dd{margin:0;text-align:right;color:var(--ivory)}
 
 #lab-fields,#legacy-fields{display:grid;gap:12px}
+
+/* The cover stays centred even when gameplay uses the landscape table. */
+@media (orientation: landscape) and (max-height: 599px) {
+  body[data-screen=welcome] .table {
+    width: min(100%, var(--content-max));
+  }
+  body[data-screen=welcome] .game {
+    width: min(calc(100% - 2 * var(--page-gutter)), calc(var(--content-max) - 2 * var(--page-gutter)));
+    top: 44px;
+    height: calc(var(--viewport-height, 100dvh) - 44px);
+    grid-template-columns: 1fr;
+    grid-template-rows: 0 minmax(0, 1fr) 0;
+    gap: 0;
+    padding-block: 12px;
+  }
+  body[data-screen=welcome] .game .board {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: center;
+  }
+  body[data-screen=welcome] .game .action-area {
+    height: 0;
+  }
+  .welcome {
+    gap: 12px;
+    padding-block: 56px 16px;
+  }
+  .welcome > * { flex-shrink: 0; }
+  .endless-entry-actions { margin-top: -8px; }
+}
