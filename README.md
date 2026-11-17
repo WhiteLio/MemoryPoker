@@ -30,6 +30,8 @@ Memory Poker #123
 
 The time is how long you spent memorizing, rounded down to whole seconds.
 
+Copy result writes directly to the clipboard and briefly shows Copied! Share opens the native share sheet on supported browsers; cancelling does nothing. Unsupported browsers direct players to Copy result, without silently copying. Both buttons use the public game URL, even in a local preview.
+
 Shares include a link to the game by default. Uncheck **Include link** below Share to leave it out. Your choice is remembered in this browser.
 
 ## A different challenge every day

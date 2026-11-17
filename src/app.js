@@ -450,13 +450,17 @@ async function share(useNative=true) {
   let text=shareText(activeNumber,place,ms,state.overtime,url);
   if(endlessMode) text=text.replace(`Memory Poker #${activeNumber}`,`Memory Poker · Endless · ${lab?`${lab.count} cards · ${PATTERNS[lab.pattern]} · ${CLARITIES[lab.clarity]}`:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][endless.profile]}`);
   if(testMode) text=text.replace(`Memory Poker #${activeNumber}`,'Memory Poker · Test');
-  if(useNative && navigator.share) {
+  if(useNative) {
+    if(!navigator.share) {
+      resultFeedback(button,'Use Copy result','Native sharing is unavailable in this browser. Use Copy result instead.');
+      return;
+    }
     try {
       await navigator.share({text});
-      return;
     } catch(error) {
-      if(error.name==='AbortError') return;
+      if(error.name!=='AbortError') resultFeedback(button,'Share failed','Sharing failed. Please try again or use Copy result.');
     }
+    return;
   }
   let copied=false;
   try {
@@ -475,12 +479,15 @@ async function share(useNative=true) {
     field.remove();
     focused?.focus({preventScroll:true});
   }
+  resultFeedback(button,copied?'Copied!':'Copy failed',copied?'Result copied.':'Clipboard access failed. Please try again.');
+}
+function resultFeedback(button,label,announcement) {
   const previous=copyFeedback.get(button);
   clearTimeout(previous?.timer);
   const html=previous?.html ?? button.innerHTML;
-  button.textContent=copied?'Copied!':'Copy failed';
-  $('announcements').textContent=copied?'Result copied.':'Clipboard access failed. Please try again.';
-  const timer=setTimeout(()=>{button.innerHTML=html;copyFeedback.delete(button);},1000);
+  button.textContent=label;
+  $('announcements').textContent=announcement;
+  const timer=setTimeout(()=>{button.innerHTML=html;copyFeedback.delete(button);},label==='Copied!'?1000:2000);
   copyFeedback.set(button,{html,timer});
 }
 document.addEventListener('visibilitychange',()=>{
