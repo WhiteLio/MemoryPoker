@@ -6,7 +6,10 @@
   "scripts": {
     "test": "node --test",
     "start": "node scripts/serve.js",
-    "qa": "node scripts/qa-serve.js"
+    "qa": "node scripts/qa-serve.js",
+    "build": "node scripts/build-site.js"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

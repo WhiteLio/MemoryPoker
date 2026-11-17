@@ -58,12 +58,9 @@ npm test
 
 ## Publish on GitHub Pages
 
-1. Create a GitHub repository and put the contents of this directory at its root.
-2. Push to the `main` branch.
-3. In the repository's **Settings > Pages**, select **Deploy from a branch**, then `main` and `/ (root)`.
-4. Open the Pages URL provided by GitHub.
+Push to `main` to run tests, build the static site, and deploy through the Deploy Pages GitHub Actions workflow. GitHub Pages must use GitHub Actions as its source.
 
-There is no build step, backend, database, API key, or scheduled task. Relative asset paths support both repository sites and custom domains. Hosting remains subject to GitHub Pages usage limits.
+`npm run build` creates `dist/` with runtime files and asset/license notices. QA fixtures and project tooling are excluded. There is no backend, database, API key, or scheduled task. Relative asset paths support repository sites and custom domains.
 
 ## Public generation, friendly competition
 
@@ -78,7 +75,7 @@ See [LAUNCH.md](LAUNCH.md) for the remaining release work.
 
 Concrete, violet accents, Korean plaques, near-white cards, and dotted backs draw on the supplied show references. Cinzel and a small Noto Serif KR subset are hosted locally. Card faces reuse Byron Knoll's public-domain vector artwork, with sharp Besley vector outlines for the card values. See [THIRD_PARTY.md](THIRD_PARTY.md) for notices and [DESIGN.md](DESIGN.md) for visual direction. No show screenshots or Netflix artwork are included.
 
-This is an independent fan project, not affiliated with or endorsed by Netflix or the show's creators. A source-code license has not yet been selected.
+This is an independent fan project, not affiliated with or endorsed by Netflix or the show's creators. Original source code is licensed under [MIT](LICENSE). Third-party artwork and fonts retain their existing licenses; see [THIRD_PARTY.md](THIRD_PARTY.md).
 
 ## Endless difficulty review
 
@@ -94,7 +91,7 @@ After each endless round, Difficulty review shows the best and second-best categ
 
 ### Independent practice controls
 
-The Endless picker now defaults to independent controls: 8/12/16 cards; columns, rows, diagonals, blocks, mirrored pairs, rings, spiral, or shuffled arrangement; and Very clear, Clear, Competing, or Unrestricted answer clarity. Weekday suggestions fill these controls but do not change the daily schedule. Original daily profiles and the earlier royal-flush/quads experiment remain available under Original daily / early experiment.
+The Endless picker now defaults to independent controls: 8/12/16 cards; columns, rows, diagonals, blocks, mirrored pairs, rings, spiral, or shuffled arrangement; and Very clear, Clear, Competing, or Unrestricted answer clarity. Weekday presets fill these controls but do not change the daily schedule. Changing a control switches the preset to Custom; the displayed controls determine the game, and the seed selects a deal within them. Start Timer begins memorization immediately. Original daily profiles and the earlier royal-flush/quads experiment remain available under Original daily / early experiment.
 
 Very clear requires a unique winning pair, trips or better, and a category gap of at least two. Clear requires trips or better and a category gap of at least one. Competing requires at least two distinct hand strengths in the winning category. Unrestricted has no clarity filter. Candidate targets include royal flushes, quads, full houses, flushes, straights, trips, and random hands. Actual distributions depend on card count and suit pattern; these controls are experimental constraints, not validated difficulty ratings or a promise of equal hand-category frequency.
 
