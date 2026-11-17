@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 167.09 242.67">
+  <defs>
+    <pattern id="dots" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#f0f0ed"/>
+      <path d="M2 0.7 3.3 2 2 3.3 0.7 2Z M6 4.8 7.2 6 6 7.2 4.8 6Z" fill="#636675" opacity=".7"/>
+      <circle cx="6" cy="2" r=".5" fill="#7a7b83"/>
+      <circle cx="2" cy="6" r=".5" fill="#7a7b83"/>
+    </pattern>
+    <g id="corner"><path d="M0 0H22L0 22Z" fill="#1b1d2a"/><circle cx="5.5" cy="5.5" r="2.5" fill="#f4f3ef"/></g>
+  </defs>
+  <rect width="167.09" height="242.67" rx="6" fill="#f8f7f2"/>
+  <rect x="8" y="7" width="151.09" height="228.67" rx="7" fill="#f8f7f2" stroke="#1b1d2a" stroke-width="2.5"/>
+  <rect x="13" y="12" width="141.09" height="218.67" rx="3" fill="url(#dots)" stroke="#353642" stroke-width=".8"/>
+  <use href="#corner" x="16" y="15"/>
+  <use href="#corner" transform="translate(151.09 15) rotate(90)"/>
+  <use href="#corner" transform="translate(151.09 227.67) rotate(180)"/>
+  <use href="#corner" transform="translate(16 227.67) rotate(270)"/>
+</svg>

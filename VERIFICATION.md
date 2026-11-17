@@ -1,0 +1,75 @@
+# Verification notes
+
+## Current card-value font
+
+Card values now use Besley Medium 500 from Google Fonts, converted to self-contained SVG paths on all 52 faces. Cinzel remains the interface/back font; the renamed fixed-width Cinzel derivative remains the timer font. Besley and its OFL notice are bundled. All 14 tests pass with Besley outlines and no embedded bitmap lettering.
+
+## Toolbar and Cinzel lettering correction
+
+Replaced Card Characters raster values with Cinzel 600 SVG outlines on all 52 faces. Removed the unused raster images and their generator. The new Memory Poker Timer font retains Cinzel 500's outlines with equal advance widths for all supported timer characters, verified by the build script. The derivative is locally hosted with the Cinzel OFL notice. Continue and the next-deal countdown use the same timer font.
+
+Wordle-inspired original SVG Help and Records icons now appear in a top bar on both screens. Date and puzzle number appear between difficulty and next-deal countdown. Browser checks confirmed the Records icon opens the records dialog, the Help icon opens Help, and the 320x568 selection view has a 568px document height and Submit ending at y=553. The Cinzel countdown and heading do not overlap. All 14 tests pass.
+
+## Menu scene, font artwork, and reset update
+
+Card Characters values are fixed PNG artwork embedded in self-contained card SVGs. The desktop font is not shipped. Korean title and tray plaques use a locally hosted Noto Serif KR subset. Violet is the primary accent.
+
+Continue displays a ticking phase timer, confirmed in both memorization and overtime. Expired unfinished attempts are discarded on reload or return after UTC midnight; a visible session can finish and review its result. The reset policy has a dedicated unit test.
+
+Menu cards are dimmed backs at the actual grid position. At 390x844, both the preview and memorization grid start at y=200.4. At 320x568, the preview grid spans y=149 to y=423 and the document remains 568px tall. Browser inspection immediately after Play confirmed phase=opening, clock=0:00, and the menu still visible during its fade. After the opening, the memorization clock runs. An async regression test verifies the clock starts at the final animation's completion, rather than at Play or the first flip. All 14 tests pass. Reduced-motion handling uses zero-duration reveals. Physical device validation remains pending.
+
+## Artwork spacing and grid centering correction
+
+Increased separation below corner values and restored uncropped court illustrations. Heart outlines now share the spade coordinate scale instead of being enlarged to fill the spade's height. At 390x844, the memorization grid spans y=200 to y=668, then moves to y=284 after the flip when shared cards appear. The conceal phase keeps its original y=200 position. Shared-card selection still fits at 320x568, with document height 568 and Submit ending at y=553. All 12 tests pass. Card Characters remains unbundled; playing-card values use Georgia.
+
+## Card proportions and typography
+
+All 52 faces recomposed at a 5:7 ratio using the bundled vector outlines and illustrated courts. Larger corner indices, smaller outside margins, pip positions independent of pip sizes. Cinzel is hosted locally with its OFL notice. Browser computed style confirmed Cinzel 500 on card backs. Titles, faces, shared cards, and backs were visually checked at 390x844. At 320x568, document height remained 568, card width was 45.7px, and Submit ended at y=553. All 12 tests pass. Local test attempt reset after verification.
+
+## Mobile screen redesign, November 17, 2026
+
+Separate welcome and puzzle views. Reference review covered Wordle's welcome screen, Krillion's landing page and rules, and Minute Cryptic's dedicated puzzle view. The active 16-card puzzle was measured at 390x844, 320x568, and 844x390: document height matched viewport height with all controls visible. At 320x568, cards measured 44px wide and Submit ended at y=553. Landscape uses two columns. Welcome and Help hold the secondary content. Results and the illustrated hand guide may scroll.
+
+Replaced repeating slate with a single CC0 concrete photograph. Removed decorative title shadow, page borders, and visible test toolbar. Help illustrates all nine hand categories with local card assets. Saved games return through Continue; the memorization clock remains based on its original timestamp.
+
+## Card artwork and sharing update
+
+Subsequent visual revision: near-white paper (#f8f7f2), serif ranks, removal of SVG gloss/filter paths, dotted SVG backs, photographic stone texture, and a darker cobalt-rimmed shared tray. DOM geometry checks showed equal 64px card widths in the 390px test viewport and no position change across all 16 cards after selecting a pair. Face-side position labels have been removed. Grid dimensions no longer shrink during recall; the shared-card region reserves its space while hidden.
+
+The updated suite has 11 passing tests, including all 52 local card assets, correct rank/suit filenames, absence of active or remote SVG content, and share text with and without a game URL. The source deck is pinned and its notices are bundled.
+
+Browser checks confirmed the daily reset control returns the daily to its unstarted state. The separate local 16-card test displays all 16 downloaded card images and illustrated courts. The memorization grid and Ready control fit at 390px wide. The flip, shared-card reveal, selection, and overtime result flows were visually inspected. Include link was toggled off, restored unchecked after reload, then toggled on and restored checked. Local test results are labeled as tests and use separate attempt storage.
+
+The following notes describe the earlier baseline verification and remain useful for core rules.
+
+Checked November 16, 2026, using Node.js 22 and the Chromium-based in-app browser.
+
+## Automated checks
+
+`npm test`: 10 passing tests. Coverage includes all poker categories, kicker comparisons, wheel straights, equal-strength suit variants, the specified one-royal-flush/fifteen-straights example, UTC reset boundaries, a stable seed fixture, 730 generated daily deals, unique card identities, arrangement constraints, pair coverage, one-second reveal, last-two selection, exact deadline behavior, away and restoration overtime, and compact share text.
+
+`node --check src/app.js`: passed.
+
+## Browser checks
+
+- Daily pregame conceals all card identities and omits shared cards.
+- Start reveals the generated board and starts the memorization timer.
+- Refresh preserves the board and original memorization start time.
+- Ready conceals the board before shared cards appear.
+- Selecting A, B, C leaves B and C selected.
+- Leaving the page before expiry and returning after expiry preserves B and C, enters overtime, and does not auto-submit.
+- Explicit overtime submission reveals the full board and top three hand groups.
+- Record book counts the completed overtime attempt toward the play streak and initially checks Include overtime.
+- Unchecking Include overtime removes the attempt from hand totals while preserving played and streak totals.
+- Share action reaches the copied confirmation. Exact result string is separately checked in unit tests.
+- Rendered mobile layouts inspected at 390x844 and 320x740. Document width remains within the viewport; card targets remain wider than 44 CSS pixels.
+
+## Remaining validation before release
+
+The compact interface revision was checked against the live Wordle landing screen and Krillion landing screen. Help now keeps extra rules collapsed; technical generation notes remain in README.md. The next-deal countdown follows UTC. Native sharing has been implemented, with physical device validation pending.
+
+- Physical iOS Safari and Android Chrome testing, including app switching and storage eviction behavior.
+- Full visual inspection of 16-card boards on mobile and playtesting of the weekly difficulty curve.
+- Background deadline auto-submission is covered by pure transition tests; end-to-end browser testing exercised the away-to-overtime path.
+- No public repository or GitHub Pages deployment has been created. The local preview is a development server.
+- The launch epoch, license, and any future generator version activation policy remain release decisions.
