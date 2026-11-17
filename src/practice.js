@@ -3,13 +3,13 @@ import {handGroups,rank,suit} from './poker.js';
 export const PATTERNS={columns:'Columns',rows:'Rows',diagonals:'Diagonals',blocks:'Blocks',mirror:'Mirrored pairs',rings:'Rings',spiral:'Spiral',shuffled:'Shuffled'};
 export const CLARITIES={obvious:'Very clear · gap 2+',clear:'Clear · gap 1+',competing:'Competing · same category',open:'Unrestricted'};
 export const PRESETS=[
-  {name:'Monday',count:8,pattern:'columns',clarity:'obvious'},
-  {name:'Tuesday',count:8,pattern:'mirror',clarity:'clear'},
-  {name:'Wednesday',count:12,pattern:'diagonals',clarity:'obvious'},
-  {name:'Thursday',count:12,pattern:'blocks',clarity:'clear'},
-  {name:'Friday',count:12,pattern:'shuffled',clarity:'clear'},
-  {name:'Saturday',count:16,pattern:'shuffled',clarity:'clear'},
-  {name:'Sunday',count:16,pattern:'spiral',clarity:'obvious'}
+  {name:'Beginner',count:8,pattern:'columns',clarity:'obvious'},
+  {name:'Easy',count:8,pattern:'mirror',clarity:'clear'},
+  {name:'Moderate',count:12,pattern:'diagonals',clarity:'obvious'},
+  {name:'Intermediate',count:12,pattern:'blocks',clarity:'clear'},
+  {name:'Hard',count:12,pattern:'shuffled',clarity:'clear'},
+  {name:'Expert',count:16,pattern:'shuffled',clarity:'clear'},
+  {name:'Advanced',count:16,pattern:'spiral',clarity:'obvious'}
 ];
 export function practiceSettings(search) {
   const p=new URLSearchParams(search),count=Number(p.get('cards')),pattern=p.get('pattern'),clarity=p.get('clarity');
