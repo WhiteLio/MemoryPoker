@@ -442,7 +442,7 @@ function renderRecords() {
 const copyFeedback=new WeakMap();
 async function share(useNative=true) {
   const button=$(useNative?'share':'copy-result');
-  const shareURL=new URL('./',location.href);
+  const shareURL=new URL(document.querySelector('link[rel=canonical]').href);
   if(endlessMode) shareURL.search=new URLSearchParams({mode:'endless',difficulty:String(endless.profile),seed:String(endless.seed),answers:clearMode?'clear':'standard'}).toString();
   if(lab) {shareURL.searchParams.set('cards',lab.count);shareURL.searchParams.set('pattern',lab.pattern);shareURL.searchParams.set('clarity',lab.clarity);}
   const url=includeLink?shareURL.href:'';
