@@ -15,14 +15,16 @@
 - Share-link preference remembered across reloads.
 - Local-only daily reset and separate 16-card test board.
 - Dependency-free tests and GitHub Actions checks.
+- Isolated browser lifecycle QA, tab-safe saves/replays, keyboard phase focus, and live announcements.
+- Enlarged-text reflow checks and JavaScript reduced-motion verification.
 
 ## Remaining before release
 
 1. **Difficulty tuning.** Review a broad sample of generated weeks. Track top-three pair counts and pattern strength, then playtest memorization difficulty. The current weekly profiles are provisional. Sunday is a patterned 16-card special.
 2. **Visual finish.** Check the complete 16-card board and action controls on short mobile screens, landscape, and enlarged text. Refine face-card artwork if needed. Keep reference typography and colors without importing show assets.
 3. **Mobile sharing.** Test native sharing, copying, fallback, and cancellation on iOS Safari and Android Chrome.
-4. **Reliability.** Browser-test foreground automatic submission, background deadlines, refresh near the deadline, midnight reset, older unfinished games, and multiple tabs. Pure transition tests cover the core timer rules, but physical device testing remains.
-5. **Accessibility.** Check keyboard focus across phase changes, screen-reader phase announcements, dialog focus, contrast, and reduced motion.
+4. **Reliability.** Browser-test foreground automatic submission, background deadlines, refresh near the deadline, midnight reset, older unfinished games, and multiple tabs. Automated rules and an isolated browser harness cover these scenarios, including stale-tab replay and streaks across rollover. Physical device testing remains.
+5. **Accessibility.** Keyboard focus, dialog return focus, live-region semantics, enlarged-text reflow, and the JavaScript reduced-motion path have been checked. Confirm actual spoken output with VoiceOver/TalkBack/NVDA and native reduced-motion settings; complete a formal contrast audit before claiming accessibility conformance.
 6. **Release settings.** Confirm the public start date, select a license, establish a version activation policy, create the repository, and publish on GitHub Pages. Test relative paths on the actual repository URL.
 
 ## Optional after launch

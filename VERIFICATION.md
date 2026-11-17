@@ -1,3 +1,24 @@
+# Current release audit — November 17, 2026
+
+The Endless difficulty lab was committed as `01b7d23` before this audit. The current automated suite has 27 passing tests, including four new persistence cases covering completion absorbing stale saves, preserving other days, same-phase selection freshness, sticky overtime, visibility isolation, and replay/reset generations. Syntax and whitespace checks pass.
+
+Browser checks ran against the actual app through the separate localhost QA server (port 4174), with storage isolated from the player's port-4173 data. The harness controls the clock and visibility; these are simulated lifecycle checks, not physical app-switch tests.
+
+Verified:
+- Keyboard Enter starts play; focus moves to the stage heading, Tab reaches Ready, and Space toggles cards while preserving their focus through rendering.
+- Foreground expiry submits a selected pair. A last-second reload preserves both selections and enters overtime when the deadline is crossed on the cover. Restoring an overtime attempt retains the pair; submitting and reloading retains the result.
+- Simulated background expiry preserves selections and enters overtime without submitting.
+- A visible old daily session survives rollover; a return from simulated background opens the next day's deal. Two completed consecutive days produce Played 2, Play streak 2, Best streak 2.
+- Two real browser tabs share selections. A stale tab with deliberately suspended storage events cannot overwrite another tab's completed result when saving on background/return, and its UI catches up. A fresh replay survives the stale tab's old completed save.
+- Records and Help have accessible dialog names; Escape closes them and returns focus to the opener. Help's expandable sections are reachable by keyboard. Phase, selection, result, and copy messages have a dedicated polite live region; timers are not live-announced every tick.
+- Blocked or malformed storage leaves play available and shows the save warning. Expiry with no selected pair enters overtime.
+- 320px-wide iframe checks with doubled interface text covered memorisation, selection, results, and Help with no horizontal overflow. Enlarged results also reflowed at 844×390. The normal 16-card short-phone selection controls remain reachable.
+- The fixture's JavaScript reduced-motion branch recorded zero moving Web Animations. CSS reduced-motion rules were reviewed; native OS media preference behavior and spoken screen-reader output are not claimed as tested.
+
+Fixes include merge-on-save, per-tab visibility markers, reset generations, stale-action guards, phase focus/announcements, and content-sized rows and labels for enlarged text. Enlarged text may scroll vertically instead of shrinking the card artwork. Physical Android Chrome / iOS Safari, VoiceOver/TalkBack/NVDA, native sharing, and actual storage eviction remain pending.
+
+---
+
 # Verification notes
 
 ## Proportional card values and copy feedback, November 17, 2026

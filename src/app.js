@@ -1,3 +1,4 @@
+import {mergeProgress,storedProgress,resetProgress} from './persistence.js';
 import {PATTERNS,CLARITIES,PRESETS,practiceSettings,practiceKey,generatePractice} from './practice.js';
 import {generateClear,difficultyMetrics} from './difficulty.js';
 import {DIFFICULTIES,MAX_SEED,endlessNumber,endlessSettings} from './endless.js';
@@ -22,13 +23,14 @@ let includeLink=true;
 try {includeLink=JSON.parse(localStorage.getItem(PREFERENCES_KEY) || '{}').includeLink!==false;} catch { /* Defaults remain usable without storage. */ }
 let attempts={}, storageOK=true, storageWarning='';
 function validAttempt(s,key) {
+  if(s?.phase==='reset') return s.number===Number(key)&&Number.isInteger(s.number)&&s.number>0&&s.number<=(testMode||endlessMode?1000000:Math.max(1,challengeNumber()))&&Number.isFinite(s.generation)&&s.generation>0&&Array.isArray(s.selected)&&s.selected.length===0;
   return s && s.number===Number(key) && Number.isInteger(s.number) && s.number>0 && s.number<=(testMode||endlessMode?1000000:challengeNumber()) && s.version===1 &&
     ['memorize','conceal','select','complete'].includes(s.phase) && Number.isFinite(s.startedAt) &&
     (s.phase==='memorize' || Number.isFinite(s.memorizedAt)) &&
     Array.isArray(s.selected) && s.selected.length<=2 && new Set(s.selected).size===s.selected.length &&
     s.selected.every(i=>Number.isInteger(i) && i>=0 && i<(lab?lab.count:generate(s.number).board.length)) &&
     (s.phase!=='complete' || (s.selected.length===2 && Number.isFinite(s.completedAt))) &&
-    typeof s.overtime==='boolean' && (s.hiddenSince===null || Number.isFinite(s.hiddenSince));
+    (s.generation===undefined||Number.isFinite(s.generation)) && (s.updatedAt===undefined||Number.isFinite(s.updatedAt)) && typeof s.overtime==='boolean' && (s.hiddenSince===null || Number.isFinite(s.hiddenSince));
 }
 try {
   const raw=localStorage.getItem(KEY);
@@ -46,16 +48,41 @@ let observedDay=Math.max(1,challengeNumber());
 if(!testMode&&!endlessMode) for(const [number,attempt] of Object.entries(attempts)) {
   if(Number(number)!==observedDay&&attempt.phase!=='complete') delete attempts[number];
 }
-let activeNumber=endlessMode?endlessNumber(lab?0:endless.profile,endless.seed):testMode?6:observedDay, deal=practiceGenerate(activeNumber), state=attempts[activeNumber] || null;
+let activeNumber=endlessMode?endlessNumber(lab?0:endless.profile,endless.seed):testMode?6:observedDay, deal=practiceGenerate(activeNumber), state=attemptFor(activeNumber);
 let assetsReady=false;
 let playing=false;
 let introRunning=false;
-let groups=handGroups(deal.board,deal.community), lastPhase='', includeOvertime=null;
+let groups=handGroups(deal.board,deal.community), lastPhase='', includeOvertime=null,announcementKey='';
 if(state) {advance(state,Date.now(),{restoring:true}); state.hiddenSince=document.hidden?Date.now():null;}
-function save() {
+function attemptFor(number) {return attempts[number]?.phase==='reset'?null:attempts[number]||null;}
+function readProgress() {
+  const parsed=JSON.parse(localStorage.getItem(KEY)||'{}');
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)||Object.entries(parsed).some(([k,v])=>!validAttempt(v,k))) throw new Error('Invalid saved data');
+  return parsed;
+}
+function syncProgress() {
+  if(!storageOK) return false;
+  const before=state?`${state.phase}:${state.overtime}:${state.selected.join(',')}`:'';
+  try {
+    const hiddenSince=state?.hiddenSince??null;
+    attempts=mergeProgress(attempts,readProgress());
+    state=attemptFor(activeNumber);
+    if(state) state.hiddenSince=hiddenSince;
+    return before!==(state?`${state.phase}:${state.overtime}:${state.selected.join(',')}`:'');
+  } catch {storageOK=false;storageWarning='Progress cannot be saved in this browser.';return true;}
+}
+function save({changed=false,remove=null}={}) {
   if(!storageOK) return;
-  try {localStorage.setItem(KEY,JSON.stringify(attempts));}
-  catch {storageOK=false; storageWarning='Progress cannot be saved in this browser.';}
+  try {
+    if(changed&&state) state.updatedAt=Math.max(Date.now(),(state.updatedAt||0)+1);
+    syncProgress();
+    if(!storageOK) return;
+    if(remove!==null) {attempts[remove]=resetProgress(remove,attempts[remove]);if(remove===activeNumber) state=null;}
+    if(!testMode&&!endlessMode) for(const [number,attempt] of Object.entries(attempts)) {
+      if(Number(number)!==activeNumber&&Number(number)!==Math.max(1,challengeNumber())&&attempt.phase!=='complete') delete attempts[number];
+    }
+    localStorage.setItem(KEY,JSON.stringify(storedProgress(attempts)));
+  } catch {storageOK=false;storageWarning='Progress cannot be saved in this browser.';}
 }
 function cardHTML(card, position, {hidden=false,selected=false,interactive=false}={}) {
   const letter=position>=0?String.fromCharCode(65+position):'';
@@ -72,6 +99,7 @@ function resultInfo(s=state,d=deal,g=groups) {
 function badge(place) {return ['🥇','🥈','🥉'][place-1] || '🃏';}
 function render() {
   const previousScreen=document.body.dataset.screen;
+  const hadGameFocus=document.querySelector('.game').contains(document.activeElement);
   const phase=introRunning?'opening':state?.phase || 'intro';
   const previousPhase=lastPhase;
   const previousBoardTop=$('board').getBoundingClientRect().top;
@@ -90,6 +118,7 @@ function render() {
   document.querySelector('.game').inert=!playing||introRunning;
   document.querySelector('.game').setAttribute('aria-hidden',String(!playing));
   $('puzzle-nav').hidden=!playing;
+  $('puzzle-nav').inert=introRunning;
   $('menu-nav').hidden=playing&&!introRunning;
   document.body.dataset.screen=introRunning?'opening':playing?(phase==='complete'?'result':'puzzle'):'welcome';
   $('enter-game').innerHTML=state?(phase==='complete'?'View result':'<span>Continue</span><span aria-hidden="true">·</span><span id="continue-clock" class="timer-readout"></span>'):'Play';
@@ -117,7 +146,17 @@ function render() {
   if(phase!==lastPhase) {animatePhase(phase,lastPhase);lastPhase=phase;}
   if($('start')) { $('start').disabled=!assetsReady; if(!assetsReady) $('start').firstChild.textContent='Loading cards '; }
   renderUnfinished(); updateClock();
-  if(oldFocus!==undefined) $('board').querySelector(`[data-position="${oldFocus}"]`)?.focus({preventScroll:true});
+  if(oldFocus!==undefined&&phase==='select') $('board').querySelector(`[data-position="${oldFocus}"]`)?.focus({preventScroll:true});
+  if(playing&&!introRunning&&phase!=='conceal'&&(phase!==previousPhase||previousScreen==='welcome'||previousScreen==='opening')) $('instruction').focus({preventScroll:true});
+  if(!playing&&hadGameFocus) $('enter-game').focus({preventScroll:true});
+  const nextAnnouncementKey=`${playing&&!introRunning}:${phase}:${state?.overtime}:${state?.selected.join(',')}`;
+  if(nextAnnouncementKey!==announcementKey) {
+    const selection=state?.selected.map(i=>String.fromCharCode(65+i)).join(' and ');
+    const choosing=phase!==previousPhase||previousScreen==='welcome'||previousScreen==='opening';
+    const announcement=playing&&!introRunning?(phase==='memorize'?'Memorise the cards. Take as long as you need.':phase==='conceal'?'Cards concealed.':phase==='select'?`${state.overtime?'Overtime. Submit when ready.':choosing?'Choose two cards. You have 20 seconds.':''} ${selection?`Selected ${selection}.`:''} ${state.selected.length} of 2 selected.`:phase==='complete'?`${handLabels([resultInfo().hand])[0]}. Ranked ${resultInfo().place}. Memorized in ${formatTime(resultInfo().ms)}${state.overtime?'. Overtime.':''}`:''):'';
+    $('announcements').textContent=announcement.trim();
+    announcementKey=nextAnnouncementKey;
+  }
   fitLayout();
   const screen=document.body.dataset.screen;
   if(screen!==previousScreen&&screen!=='opening'&&previousScreen!=='opening') {
@@ -136,6 +175,8 @@ function fitLayout() {
   const tableStyle=getComputedStyle(table);
   const contentWidth=table.clientWidth-parseFloat(tableStyle.paddingLeft)-parseFloat(tableStyle.paddingRight);
   const rows=deal.board.length/4, gap=height<700?6:8;
+  const plaqueExtra=Math.max(0,document.querySelector('.plaque').getBoundingClientRect().height-26);
+  document.documentElement.style.setProperty('--plaque-extra',`${plaqueExtra}px`);
   const availableHeight=height-(landscape?92:height<700?230:266);
   const cardHeight=(availableHeight-(rows-1)*gap)/(landscape?rows:rows+1);
   const cardWidth=Math.max(24,Math.min(78,cardHeight/1.4,((landscape?contentWidth*.56:contentWidth)-3*gap)/4));
@@ -154,7 +195,7 @@ function animatePhase(phase,previous) {
 }
 async function enterGame() {
   if(introRunning||!assetsReady) return;
-  if(state) {playing=true;state.hiddenSince=null;save();render();return;}
+  if(state) {reconcile({restoring:true});playing=true;state.hiddenSince=null;save();render();return;}
   const number=activeNumber;
   introRunning=true;playing=true;render();
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -174,9 +215,10 @@ async function enterGame() {
   introRunning=false;
   if(activeNumber!==number) {playing=false;render();return;}
   // Start the scored clock only once every card has finished revealing.
-  state=attempts[number]||freshAttempt;
+  freshAttempt.generation=attempts[number]?.generation||0;
+  state=attemptFor(number)||freshAttempt;
   state.hiddenSince=document.hidden?Date.now():null;
-  attempts[number]=state;save();render();
+  attempts[number]=state;save({changed:true});render();
 }
 function updateClock() {
   const now=Date.now(), phase=state?.phase;
@@ -206,10 +248,10 @@ function reconcile(options={}) {
   if(!state) return;
   const before=state.phase+state.overtime;
   advance(state,Date.now(),{away:document.hidden||!playing||$('modal').open,...options});
-  if(before!==state.phase+state.overtime) {save();render();}
+  if(before!==state.phase+state.overtime) {save({changed:true});render();}
 }
 function switchDeal(number) {
-  activeNumber=number; deal=generate(number); groups=handGroups(deal.board,deal.community); state=attempts[number]||null;
+  activeNumber=number; deal=generate(number); groups=handGroups(deal.board,deal.community); state=attemptFor(number);
   if(state) {advance(state,Date.now(),{restoring:true});state.hiddenSince=document.hidden?Date.now():null;}
   save();render();window.scrollTo({top:0,behavior:'instant'});
 }
@@ -231,26 +273,27 @@ document.addEventListener('change',event=>{
 document.addEventListener('click',event=>{
   const button=event.target.closest('button'); if(!button) return;
   if(introRunning) return;
+  if(syncProgress()) render();
   reconcile();
   if(['endless-entry','endless-config','endless-toolbar'].includes(button.id)) openEndless();
   if(button.id==='daily-entry') location.href='./';
   if(button.id==='endless-next'||button.id==='endless-skip') goEndless(endless.profile,endless.seed===MAX_SEED?1:endless.seed+1);
-  if(button.id==='endless-replay') {delete attempts[activeNumber];state=null;playing=false;save();lastPhase='';render();void enterGame();}
+  if(button.id==='endless-replay') {save({remove:activeNumber});state=null;playing=false;lastPhase='';render();void enterGame();}
   if(button.id==='enter-game') {
     void enterGame();
   }
   if(button.id==='home') {playing=false;if(state)state.hiddenSince=Date.now();save();render();}
-  if(button.id==='start' && !state) {state=newAttempt(activeNumber);attempts[activeNumber]=state;save();render();}
-  if(button.id==='ready') {ready(state,Date.now());save();render();}
-  if(button.dataset.position!==undefined) {selectCard(state,Number(button.dataset.position));save();render();}
-  if(button.id==='submit' && submit(state,Date.now())) {save();render();}
+  if(button.id==='start' && !state) {state=newAttempt(activeNumber);attempts[activeNumber]=state;save({changed:true});render();}
+  if(button.id==='ready'&&state?.phase==='memorize') {ready(state,Date.now());save({changed:true});render();}
+  if(button.dataset.position!==undefined&&state?.phase==='select') {selectCard(state,Number(button.dataset.position));save({changed:true});render();}
+  if(button.id==='submit' && state && submit(state,Date.now())) {save({changed:true});render();}
   if(button.dataset.resume) switchDeal(Number(button.dataset.resume));
   if(button.id==='help'||button.id==='puzzle-help') openHelp();
   if(button.id==='records'||button.id==='puzzle-records'||button.id==='view-records') openRecords();
   if(button.id==='close-modal') void closeModal();
   if(button.id==='share') void share(true);
   if(button.id==='copy-result') void share(false);
-  if(button.id==='reset-test') {delete attempts[activeNumber];state=null;playing=false;save();lastPhase='';$('modal').close();render();}
+  if(button.id==='reset-test') {save({remove:activeNumber});state=null;playing=false;lastPhase='';$('modal').close();render();}
 });
 const surfaceAnimations=new WeakMap();
 function animateSurface(element,closing=false) {
@@ -264,7 +307,10 @@ function animateSurface(element,closing=false) {
   surfaceAnimations.set(element,animation);
   return animation;
 }
-let closingModal=false;
+let closingModal=false,modalOpener=null;
+$('modal').addEventListener('close',()=>{
+  if(modalOpener?.isConnected&&!modalOpener.closest('[hidden], [inert]')) modalOpener.focus({preventScroll:true});
+});
 async function closeModal() {
   const modal=$('modal');
   if(closingModal||!modal.open) return;
@@ -290,6 +336,8 @@ $('modal').addEventListener('click',event=>{
   backdropPointerDown=false;
 });
 function openModal(title,html,{fullScreen=false}={}) {
+  modalOpener=document.activeElement;
+  $('modal').setAttribute('aria-label',title);
   $('modal-title').textContent=title;
   $('modal-title').hidden=title==='Records';
   $('modal').classList.toggle('records-dialog',title==='Records');
@@ -307,7 +355,7 @@ function goEndless(profile,seed,answers=clearMode?'clear':'standard',settings=la
   endlessNumber(profile,seed);
   const params=new URLSearchParams({mode:'endless',difficulty:String(profile),seed:String(seed),answers,play:'1'});
   if(settings) {params.set('cards',settings.count);params.set('pattern',settings.pattern);params.set('clarity',settings.clarity);}
-  if(endlessMode&&((lab&&settings&&practiceKey(lab)===practiceKey(settings))||(!lab&&!settings&&answers===(clearMode?'clear':'standard')))) {delete attempts[endlessNumber(profile,seed)];save();}
+  if(endlessMode&&((lab&&settings&&practiceKey(lab)===practiceKey(settings))||(!lab&&!settings&&answers===(clearMode?'clear':'standard')))) {save({remove:endlessNumber(profile,seed)});}
   location.href=`?${params}`;
 }
 function openEndless() {
@@ -326,7 +374,7 @@ function openEndless() {
     const settings=$('practice-preset').value==='legacy'?null:{count:Number($('practice-count').value),pattern:$('practice-pattern').value,clarity:$('practice-clarity').value};
     const profile=Number($('endless-difficulty').value),seed=Number($('endless-seed').value),answers=$('endless-answers').value;
     if(endlessMode&&profile===endless.profile&&seed===endless.seed&&((lab&&settings&&practiceKey(lab)===practiceKey(settings))||(!lab&&!settings&&answers===(clearMode?'clear':'standard')))) {
-      delete attempts[activeNumber];state=null;playing=false;save();lastPhase='';$('modal').close();render();void enterGame();
+      save({remove:activeNumber});state=null;playing=false;lastPhase='';$('modal').close();render();void enterGame();
     } else goEndless(profile,seed,answers,settings);
   });
 }
@@ -379,6 +427,7 @@ async function share(useNative=true) {
     clearTimeout(previous?.timer);
     const html=previous?.html ?? button.innerHTML;
     button.textContent='Copied!';
+    $('announcements').textContent='Result copied.';
     const timer=setTimeout(()=>{button.innerHTML=html;copyFeedback.delete(button);},1000);
     copyFeedback.set(button,{html,timer});
   } catch {
@@ -387,6 +436,7 @@ async function share(useNative=true) {
   }
 }
 document.addEventListener('visibilitychange',()=>{
+  if(syncProgress()) render();
   if(!document.hidden&&refreshDaily({away:true})) return;
   if(state) {
     if(document.hidden) {state.hiddenSince=Date.now();save();}
@@ -402,8 +452,11 @@ window.addEventListener('storage',event=>{
     const updated=JSON.parse(event.newValue || '{}');
     if(!updated || typeof updated!=='object' || Array.isArray(updated) || Object.entries(updated).some(([k,v])=>!validAttempt(v,k))) return;
     if(playing&&state&&activeNumber!==Math.max(1,challengeNumber())&&!updated[activeNumber]) updated[activeNumber]=state;
-    attempts=updated;state=attempts[activeNumber]||null;
-    if(state) advance(state,Date.now(),{away:document.hidden});
+    const hiddenSince=state?.hiddenSince??null;
+    attempts=mergeProgress(attempts,updated);
+    if(!updated[activeNumber]&&!(playing&&state&&!testMode&&!endlessMode&&activeNumber!==Math.max(1,challengeNumber()))) delete attempts[activeNumber];
+    state=attemptFor(activeNumber);
+    if(state) {state.hiddenSince=hiddenSince;advance(state,Date.now(),{away:document.hidden||!playing||$('modal').open,restoring:true});}
     render();
   } catch { /* Leave the current attempt intact if another tab writes invalid data. */ }
 });

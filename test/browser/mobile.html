@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Responsive QA</title>
+  <style>
+    body { margin:16px; background:#333; color:white; font:14px Arial; }
+    iframe { display:block; width:320px; height:568px; border:0; margin-top:12px; }
+  </style>
+</head>
+<body>
+  <label>Viewport <select id="qa-size">
+    <option value="320,568">320 × 568</option>
+    <option value="384,824">384 × 824</option>
+    <option value="844,390">844 × 390</option>
+  </select></label>
+  <iframe title="Memory Poker QA"></iframe>
+  <script>
+    const params=new URLSearchParams(location.search),frame=document.querySelector('iframe');
+    frame.src='/?test=16&motion=reduce&qa='+encodeURIComponent(params.get('qa')||'responsive');
+    document.querySelector('select').onchange=event=>{
+      const [width,height]=event.target.value.split(',');
+      frame.style.width=width+'px';frame.style.height=height+'px';
+    };
+  </script>
+</body>
+</html>

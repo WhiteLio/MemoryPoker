@@ -99,3 +99,11 @@ The Endless picker now defaults to independent controls: 8/12/16 cards; columns,
 Very clear requires a unique winning pair, trips or better, and a category gap of at least two. Clear requires trips or better and a category gap of at least one. Competing requires at least two distinct hand strengths in the winning category. Unrestricted has no clarity filter. Candidate targets include royal flushes, quads, full houses, flushes, straights, trips, and random hands. Actual distributions depend on card count and suit pattern; these controls are experimental constraints, not validated difficulty ratings or a promise of equal hand-category frequency.
 
 Practice deals use their own deterministic generator and storage keyed by the complete settings. Suit identities are shuffled per seed. Rank positions are shuffled within each suit, so the winning cards do not occupy a fixed point in a pattern. Next deal retains all controls. Shares include the controls and seed.
+
+## Browser reliability checks
+
+`npm run qa` starts a separate loopback server on port 4174. It injects a test fixture into the existing game with namespaced storage, a controlled clock, simulated visibility, and optional blocked/corrupt storage. Normal `npm start` and the published entry point never load the fixture.
+
+Use `http://127.0.0.1:4174/?test=16&qa=example` for an isolated repeatable scenario; changing `qa` creates separate progress. The clock advances only with its buttons and is shared across tabs with the same namespace. Suspend sync simulates delayed storage events. `motion=reduce` exercises the JavaScript reduced-motion path. `storage=blocked` disables game storage; `storage=corrupt` seeds malformed test progress once.
+
+`http://127.0.0.1:4174/test/browser/mobile.html?qa=mobile-example` embeds the game at 320×568, 384×824, or 844×390. Large text doubles interface text, including newly rendered controls; this is a text-sizing simulation, not native browser zoom. The QA toolbar follows the game in document flow so it does not obscure controls. OS screen-reader output, native reduced-motion preferences, storage eviction, and mobile background suspension still require physical-device checks.
