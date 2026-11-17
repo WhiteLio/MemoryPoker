@@ -1,3 +1,4 @@
+import {preloadMenu} from './loading.js';
 import {mergeProgress,storedProgress,resetProgress} from './persistence.js';
 import {PATTERNS,CLARITIES,PRESETS,practiceSettings,practiceKey,generatePractice} from './practice.js';
 import {generateClear,difficultyMetrics} from './difficulty.js';
@@ -520,4 +521,13 @@ setInterval(()=>{
   reconcile();updateClock();
 },100);
 save();render();
-void preloadCards([...deal.board,...deal.community]).then(()=>{assetsReady=true;render();if(endlessMode&&new URLSearchParams(location.search).get('play')==='1') void enterGame();});
+void Promise.all([preloadMenu(),preloadCards([...deal.board,...deal.community])]).then(()=>{
+  assetsReady=true;
+  render();
+  document.documentElement.removeAttribute('data-loading');
+  document.body.removeAttribute('aria-busy');
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.documentElement.animate([{opacity:0},{opacity:1}],{duration:200,easing:EASE_OUT_QUAD});
+  }
+  if(endlessMode&&new URLSearchParams(location.search).get('play')==='1') void enterGame();
+});
