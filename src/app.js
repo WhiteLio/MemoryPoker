@@ -521,13 +521,13 @@ setInterval(()=>{
   reconcile();updateClock();
 },100);
 save();render();
-void Promise.all([preloadMenu(),preloadCards([...deal.board,...deal.community])]).then(()=>{
+void Promise.all([preloadMenu(),preloadCards([...deal.board,...deal.community])]).then(([,cardsReady])=>{
+  if(!cardsReady) throw new Error('Card assets unavailable');
   assetsReady=true;
   render();
-  document.documentElement.removeAttribute('data-loading');
-  document.body.removeAttribute('aria-busy');
+  window.dispatchEvent(new Event('memory-poker:ready'));
   if(!matchMedia('(prefers-reduced-motion: reduce)').matches) {
     document.documentElement.animate([{opacity:0},{opacity:1}],{duration:200,easing:EASE_OUT_QUAD});
   }
   if(endlessMode&&new URLSearchParams(location.search).get('play')==='1') void enterGame();
-});
+}).catch(()=>window.dispatchEvent(new Event('memory-poker:load-error')));

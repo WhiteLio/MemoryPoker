@@ -106,3 +106,7 @@ Practice deals use their own deterministic generator and storage keyed by the co
 Use `http://127.0.0.1:4174/?test=16&qa=example` for an isolated repeatable scenario; changing `qa` creates separate progress. The clock advances only with its buttons and is shared across tabs with the same namespace. Suspend sync simulates delayed storage events. `motion=reduce` exercises the JavaScript reduced-motion path. `storage=blocked` disables game storage; `storage=corrupt` seeds malformed test progress once.
 
 `http://127.0.0.1:4174/test/browser/mobile.html?qa=mobile-example` embeds the game at 320×568, 384×824, or 844×390. Large text doubles interface text, including newly rendered controls; this is a text-sizing simulation, not native browser zoom. The QA toolbar follows the game in document flow so it does not obscure controls. OS screen-reader output, native reduced-motion preferences, storage eviction, and mobile background suspension still require physical-device checks.
+
+## Startup loading
+
+A centred violet spinner stays visible while the initial fonts, background and card images load. Individual assets have a six-second deadline. Optional artwork/fonts can fall back; missing card faces show a Retry screen instead of starting an unreadable game. An independent twelve-second watchdog also covers failed application startup. Static deployments version the page's stylesheets and complete JavaScript module graph together to prevent cached startup-code mismatches.
