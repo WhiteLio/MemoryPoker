@@ -160,7 +160,7 @@ function render() {
   }
   fitLayout();
   const screen=document.body.dataset.screen;
-  if(screen!==previousScreen&&screen!=='opening'&&previousScreen!=='opening') {
+  if(!document.documentElement.hasAttribute('data-loading')&&screen!==previousScreen&&screen!=='opening'&&previousScreen!=='opening') {
     animateSurface(screen==='welcome'?$('welcome'):document.querySelector('.game'));
   }
   if(phase==='select'&&previousPhase==='conceal'&&!matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -530,4 +530,5 @@ void Promise.all([preloadMenu(),preloadCards([...deal.board,...deal.community])]
     document.documentElement.animate([{opacity:0},{opacity:1}],{duration:200,easing:EASE_OUT_QUAD});
   }
   if(endlessMode&&new URLSearchParams(location.search).get('play')==='1') void enterGame();
+  else animateSurface($('welcome'));
 }).catch(()=>window.dispatchEvent(new Event('memory-poker:load-error')));
