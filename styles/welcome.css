@@ -142,3 +142,14 @@ body[data-screen=opening] .welcome {
   .welcome > * { flex-shrink: 0; }
   .endless-entry-actions { margin-top: -8px; }
 }
+
+.endless-form select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-inline: 12px 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6' fill='none' stroke='%23b99bd3' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 16px 16px;
+  background-position: right 12px center;
+}
+.endless-form select:focus-visible { outline-color: #b99bd3; }

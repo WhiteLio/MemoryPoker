@@ -295,6 +295,44 @@ document.addEventListener('click',event=>{
   if(button.id==='copy-result') void share(false);
   if(button.id==='reset-test') {save({remove:activeNumber});state=null;playing=false;lastPhase='';$('modal').close();render();}
 });
+const handAnimations=new WeakMap();
+document.addEventListener('click',event=>{
+  const summary=event.target.closest('details > summary');
+  if(!summary) return;
+  event.preventDefault();
+  const details=summary.parentElement;
+  let list=details.querySelector(':scope > .disclosure-content');
+  if(!list) {
+    list=document.createElement('div');
+    list.className='disclosure-content';
+    while(summary.nextSibling) list.append(summary.nextSibling);
+    details.append(list);
+  }
+  const previous=handAnimations.get(details);
+  const expand=previous?!previous.expand:!details.open;
+  const from=details.getBoundingClientRect().height;
+  previous?.animation.cancel();
+  handAnimations.delete(details);
+  delete details.dataset.animating;
+  delete details.dataset.closing;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) {details.open=expand;return;}
+  details.open=true;
+  const to=expand?details.getBoundingClientRect().height:summary.getBoundingClientRect().height+parseFloat(getComputedStyle(details).borderBottomWidth);
+  details.dataset.animating='';
+  if(!expand) details.dataset.closing='';
+  const animation=details.animate([{height:`${from}px`},{height:`${to}px`}],{duration:200,easing:EASE_OUT_QUAD});
+  const entry={animation,expand};
+  handAnimations.set(details,entry);
+  list.getAnimations().forEach(a=>a.cancel());
+  list.animate(expand?[{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}]:[{opacity:1},{opacity:0}],{duration:expand?200:120,easing:EASE_OUT_QUAD});
+  animation.finished.then(()=>{
+    if(handAnimations.get(details)!==entry) return;
+    details.open=expand;
+    delete details.dataset.animating;
+    delete details.dataset.closing;
+    handAnimations.delete(details);
+  }).catch(()=>{});
+});
 const surfaceAnimations=new WeakMap();
 function animateSurface(element,closing=false) {
   const current=closing?getComputedStyle(element):null;
@@ -420,19 +458,30 @@ async function share(useNative=true) {
       if(error.name==='AbortError') return;
     }
   }
+  let copied=false;
   try {
     await navigator.clipboard.writeText(text);
-    const previous=copyFeedback.get(button);
-    clearTimeout(previous?.timer);
-    const html=previous?.html ?? button.innerHTML;
-    button.textContent='Copied!';
-    $('announcements').textContent='Result copied.';
-    const timer=setTimeout(()=>{button.innerHTML=html;copyFeedback.delete(button);},1000);
-    copyFeedback.set(button,{html,timer});
+    copied=true;
   } catch {
-    openModal('Share','<textarea id="share-copy" readonly rows="3" aria-label="Share result"></textarea>');
-    $('share-copy').value=text;$('share-copy').select();
+    const focused=document.activeElement;
+    const field=document.createElement('textarea');
+    field.value=text;
+    field.readOnly=true;
+    field.setAttribute('aria-label','Copy result');
+    Object.assign(field.style,{position:'fixed',top:'0',left:'-9999px',opacity:'0',fontSize:'16px'});
+    document.body.append(field);
+    field.select();
+    try {copied=document.execCommand('copy');} catch {copied=false;}
+    field.remove();
+    focused?.focus({preventScroll:true});
   }
+  const previous=copyFeedback.get(button);
+  clearTimeout(previous?.timer);
+  const html=previous?.html ?? button.innerHTML;
+  button.textContent=copied?'Copied!':'Copy failed';
+  $('announcements').textContent=copied?'Result copied.':'Clipboard access failed. Please try again.';
+  const timer=setTimeout(()=>{button.innerHTML=html;copyFeedback.delete(button);},1000);
+  copyFeedback.set(button,{html,timer});
 }
 document.addEventListener('visibilitychange',()=>{
   if(syncProgress()) render();
