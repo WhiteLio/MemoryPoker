@@ -40,3 +40,10 @@ export function shareText(number, handRank, memorizationMs, overtime, url='') {
   const badge=handRank===1?'🥇':handRank===2?'🥈':handRank===3?'🥉':`${handRank}🃏`;
   return `Memory Poker #${number}\n${badge}${formatTime(memorizationMs)}${overtime?' · Overtime':''}${url?'\n'+url:''}`;
 }
+
+export function formatNextDeal(ms) {
+  const hours=Math.floor(ms/3600000);
+  if(hours>=1) return `${hours}hr${hours===1?'':'s'}`;
+  const minutes=Math.max(1,Math.floor(ms/60000));
+  return `${minutes}min${minutes===1?'':'s'}`;
+}

@@ -1,6 +1,6 @@
 import {generate, challengeNumber} from './generator.js';
-import {face, suit, SUITS, cardText, evaluate, handGroups} from './poker.js';
-import {newAttempt, ready, advance, selectCard, submit, deadline, formatTime, shareText, shouldReplaceDeal} from './state.js';
+import {face, suit, SUITS, cardText, evaluate, handGroups, handLabels} from './poker.js';
+import {newAttempt, ready, advance, selectCard, submit, deadline, formatTime, shareText, shouldReplaceDeal, formatNextDeal} from './state.js';
 import {cardPath,preloadCards} from './cards.js';
 import {helpHTML} from './help.js';
 import {EASE_OUT_QUAD,newAttemptAfterIntro} from './intro.js';
@@ -62,13 +62,13 @@ function resultInfo(s=state,d=deal,g=groups) {
   return {hand,place:g.findIndex(group=>group.score===hand.score)+1,ms:s.memorizedAt-s.startedAt};
 }
 function badge(place) {return ['🥇','🥈','🥉'][place-1] || '🃏';}
-function ordinal(n) {return `${n}${n%100>=11&&n%100<=13?'th':({1:'st',2:'nd',3:'rd'}[n%10]||'th')}`;}
 function render() {
+  const previousScreen=document.body.dataset.screen;
   const phase=introRunning?'opening':state?.phase || 'intro';
   const previousPhase=lastPhase;
   const previousBoardTop=$('board').getBoundingClientRect().top;
   const oldFocus=document.activeElement?.dataset.position;
-  $('edition').textContent=`No. ${activeNumber} · ${new Date(deal.date+'T12:00:00Z').toLocaleDateString('en',{month:'short',day:'numeric',timeZone:'UTC'})}`;
+  $('edition').textContent=`#${activeNumber} · ${new Date(deal.date+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'})}`;
   $('welcome').hidden=playing&&!introRunning;
   document.querySelector('.game').hidden=false;
   document.querySelector('.game').inert=!playing||introRunning;
@@ -78,8 +78,8 @@ function render() {
   document.body.dataset.screen=introRunning?'opening':playing?(phase==='complete'?'result':'puzzle'):'welcome';
   $('enter-game').innerHTML=state?(phase==='complete'?'View result':'<span>Continue</span><span aria-hidden="true">·</span><span id="continue-clock" class="timer-readout"></span>'):'Play';
   $('enter-game').disabled=!assetsReady||introRunning;
-  $('difficulty').textContent=`${deal.profile} · ${deal.board.length} cards`;
-  const text={intro:['','Memorize',''],opening:['','Memorize',''],memorize:['','Memorize',''],conceal:['','Ready?',''],select:['',state?.overtime?'Overtime':'Pick two cards',''],complete:['','Your hand','']}[phase];
+  $('difficulty').textContent=`${new Date(deal.date+'T12:00:00Z').toLocaleDateString('en',{weekday:'long',timeZone:'UTC'})} · ${deal.board.length} cards`;
+  const text={intro:['','Memorise',''],opening:['','Memorise',''],memorize:['','Memorise',''],conceal:['','Choose 2',''],select:['','Choose 2',''],complete:['','Results','']}[phase];
   $('phase-label').textContent=text[0]; $('instruction').textContent=text[1]; $('detail').textContent=text[2];
   $('phase-label').hidden=!text[0]; $('detail').hidden=!text[2];
   $('community').hidden=!playing||!['select','complete'].includes(phase);
@@ -88,14 +88,11 @@ function render() {
   $('board').innerHTML=deal.board.map((c,i)=>cardHTML(c,i,{hidden:concealed,selected:state?.selected.includes(i),interactive:phase==='select'})).join('');
   $('board').classList.toggle('preview',phase==='intro');
   $('board').classList.toggle('full-board',deal.board.length===16);
+  $('board').classList.toggle('pair-chosen',['select','complete'].includes(phase)&&state.selected.length===2);
   document.querySelector('.game').dataset.phase=phase;
   $('action-area').innerHTML=phase==='intro'?`<p class="deal-note">${deal.modifier==='columns'?'Suits in columns':deal.modifier==='diagonals'?'Suits on diagonals':'Shuffled'}</p><button class="primary" id="start">Play <span>♠</span></button><p class="fine-print">Study as long as you like. Choose in 20 seconds.</p>`:phase==='memorize'?'<button class="primary" id="ready">Ready <span>→</span></button>':phase==='select'?`<div class="selection-summary">${state.selected.length?state.selected.map(i=>String.fromCharCode(65+i)).join(' + '):'Choose two'}<span>${state.selected.length}/2</span></div><button class="primary" id="submit" ${state.selected.length!==2?'disabled':''}>Submit <span>♠</span></button>`:'';
   $('results').hidden=!playing||phase!=='complete';
-  if(phase==='complete') {
-    renderResults();
-    if(navigator.share) $('share-feedback').insertAdjacentHTML('beforebegin','<button id="copy-result" class="text-button copy-result">Copy result</button>');
-    $('share-feedback').insertAdjacentHTML('beforebegin',`<label class="checkbox-label share-link-option"><input id="include-link" type="checkbox" ${includeLink?'checked':''}> Include link</label>`);
-  }
+  if(phase==='complete') renderResults();
   $('status').textContent=storageWarning;
   $('status').hidden=!$('status').textContent;
   $('status').classList.toggle('warning',!storageOK);
@@ -104,6 +101,10 @@ function render() {
   renderUnfinished(); updateClock();
   if(oldFocus!==undefined) $('board').querySelector(`[data-position="${oldFocus}"]`)?.focus({preventScroll:true});
   fitLayout();
+  const screen=document.body.dataset.screen;
+  if(screen!==previousScreen&&screen!=='opening'&&previousScreen!=='opening') {
+    animateSurface(screen==='welcome'?$('welcome'):document.querySelector('.game'));
+  }
   if(phase==='select'&&previousPhase==='conceal'&&!matchMedia('(prefers-reduced-motion: reduce)').matches) {
     const offset=previousBoardTop-$('board').getBoundingClientRect().top;
     $('board').animate([{transform:`translateY(${offset}px)`},{transform:'none'}],{duration:320,easing:EASE_OUT_QUAD});
@@ -113,10 +114,13 @@ function fitLayout() {
   const width=window.visualViewport?.width||innerWidth;
   const height=window.visualViewport?.height||innerHeight;
   const landscape=width>height&&height<600;
+  const table=document.querySelector('.table');
+  const tableStyle=getComputedStyle(table);
+  const contentWidth=table.clientWidth-parseFloat(tableStyle.paddingLeft)-parseFloat(tableStyle.paddingRight);
   const rows=deal.board.length/4, gap=height<700?6:8;
   const availableHeight=height-(landscape?92:height<700?230:266);
   const cardHeight=(availableHeight-(rows-1)*gap)/(landscape?rows:rows+1);
-  const cardWidth=Math.max(24,Math.min(84,cardHeight/1.4,((landscape?width*.56:width)-40-3*gap)/4));
+  const cardWidth=Math.max(24,Math.min(78,cardHeight/1.4,((landscape?contentWidth*.56:contentWidth)-3*gap)/4));
   document.documentElement.style.setProperty('--card-width',`${cardWidth}px`);
   document.documentElement.style.setProperty('--grid-gap',`${gap}px`);
   document.documentElement.style.setProperty('--viewport-height',`${height}px`);
@@ -138,7 +142,8 @@ async function enterGame() {
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const animations=[];
   const options={duration:reduced?0:480,easing:EASE_OUT_QUAD,fill:'both'};
-  animations.push($('welcome').animate([{opacity:1},{opacity:0}],options));
+  animations.push($('welcome').animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-8px)'}],options));
+  animations.push(document.querySelector('.game').animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'none'}],{...options,duration:reduced?0:200}));
   animations.push($('menu-nav').animate([{opacity:1},{opacity:0}],options));
   animations.push($('board').animate([{opacity:.13},{opacity:1}],options));
   animations.push($('puzzle-nav').animate([{opacity:0},{opacity:1}],options));
@@ -157,21 +162,24 @@ async function enterGame() {
 }
 function updateClock() {
   const now=Date.now(), phase=state?.phase;
-  $('clock-label').textContent=phase==='select'?(state.overtime?'OVERTIME':'CHOOSE'):phase==='conceal'?'RECALL':'MEMORIZE';
-  $('clock').textContent=!state?'0:00':phase==='memorize'?formatTime(now-state.startedAt):phase==='select'?(state.overtime?'+'+formatTime(now-deadline(state)):String(Math.max(0,Math.ceil((deadline(state)-now)/1000)))+'s'):phase==='conceal'?'1s':formatTime(state.memorizedAt-state.startedAt);
+  $('clock').setAttribute('aria-label',phase==='select'?(state.overtime?'Overtime elapsed':'Selection time remaining'):'Elapsed memorisation time');
+  const clockTime=ms=>formatTime(ms).padStart(5,'0');
+  $('clock').textContent=!state?'00:00':phase==='memorize'?clockTime(now-state.startedAt):phase==='select'?(state.overtime?'+'+clockTime(now-deadline(state)):clockTime(Math.ceil(Math.max(0,deadline(state)-now)/1000)*1000)):phase==='conceal'?'00:01':clockTime(state.memorizedAt-state.startedAt);
   $('clock').classList.toggle('overtime',!!state?.overtime);
   if($('continue-clock')) $('continue-clock').textContent=$('clock').textContent;
   const untilReset=86400000-((now%86400000)+86400000)%86400000;
-  const hours=Math.floor(untilReset/3600000),minutes=Math.floor(untilReset%3600000/60000);
-  const resetText=`${hours}h ${String(minutes).padStart(2,'0')}m`;
+  const resetText=formatNextDeal(untilReset);
   if($('next-deal').dataset.time!==resetText) {
-    $('next-deal').innerHTML=`Next deal <span class="timer-readout">${resetText}</span>`;
+    $('next-deal').innerHTML=`Next deal in <span>${resetText}</span>`;
     $('next-deal').dataset.time=resetText;
   }
 }
 function renderResults() {
   const {hand,place,ms}=resultInfo();
-  $('results').innerHTML=`<div class="result-card"><div class="result-medal">${badge(place)}</div><div><p class="eyebrow">${ordinal(place).toUpperCase()} BEST HAND${state.overtime?' · OVERTIME':''}</p><h2>${hand.name}</h2><p><strong>${formatTime(ms)}</strong> memorizing</p></div></div><button id="share" class="primary">Share <span>↗</span></button><div id="share-feedback" role="status"></div><div class="section-divider"><span>BEST HANDS</span></div><div class="best-hands">${groups.slice(0,3).map((g,i)=>`<details ${i===0?'open':''}><summary><span>${badge(i+1)} ${g.name}</span><span>${g.pairs.length} ${g.pairs.length===1?'pair':'pairs'} <span aria-hidden="true">⌄</span></span></summary><div class="pair-list">${g.pairs.map(pair=>`<div class="pair"><b>${pair.map(p=>String.fromCharCode(65+p)).join(' + ')}</b><span>${pair.map(p=>`<span class="${[1,2].includes(suit(deal.board[p]))?'red':''}">${cardText(deal.board[p])}</span>`).join(' & ')}</span></div>`).join('')}</div></details>`).join('')}</div><button class="secondary" id="view-records">Records</button>`;
+  const labels=handLabels(groups.slice(0,3));
+  const resultLabel=handLabels([hand])[0];
+  const placing=place===1?'Best hand':`${place===2?'2nd':place===3?'3rd':`#${place}`} best hand`;
+  $('results').innerHTML=`<div class="result-card"><div class="result-medal">${badge(place)}</div><div><p class="eyebrow">${placing}${state.overtime?' · OVERTIME':''}</p><h2>${resultLabel}</h2><p class="memorized-time">memorized in ${formatTime(ms)}</p></div></div><div class="result-actions"><button id="copy-result" class="secondary">Copy result</button><button id="share" class="primary">Share <svg class="share-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10H5v11h14V10h-3M12 15V3m-4 4 4-4 4 4"/></svg></button></div><label class="checkbox-label share-link-option"><input id="include-link" type="checkbox" ${includeLink?'checked':''}> Include link</label><div class="section-divider"><span>BEST HANDS</span></div><div class="best-hands">${groups.slice(0,3).map((g,i)=>`<details ${i===0?'open':''}><summary><span>${badge(i+1)} ${labels[i]}</span><span>${g.pairs.length} ${g.pairs.length===1?'pair':'pairs'} <svg class="pairs-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></summary><div class="pair-list">${g.pairs.map(pair=>`<div class="pair"><b>${pair.map(p=>String.fromCharCode(65+p)).join(' + ')}</b><span>${pair.map(p=>`<span class="${[1,2].includes(suit(deal.board[p]))?'red':''}">${cardText(deal.board[p])}</span>`).join(' ')}</span></div>`).join('')}</div></details>`).join('')}</div>`;
 }
 function renderUnfinished() {$('unfinished').hidden=true;}
 function reconcile(options={}) {
@@ -215,14 +223,60 @@ document.addEventListener('click',event=>{
   if(button.dataset.resume) switchDeal(Number(button.dataset.resume));
   if(button.id==='help'||button.id==='puzzle-help') openHelp();
   if(button.id==='records'||button.id==='puzzle-records'||button.id==='view-records') openRecords();
-  if(button.id==='close-modal') $('modal').close();
+  if(button.id==='close-modal') void closeModal();
   if(button.id==='share') void share(true);
   if(button.id==='copy-result') void share(false);
   if(button.id==='reset-test') {delete attempts[activeNumber];state=null;playing=false;save();lastPhase='';$('modal').close();render();}
 });
-function openModal(title,html) {$('modal-title').textContent=title;$('modal-body').innerHTML=html;$('modal').showModal();}
+const surfaceAnimations=new WeakMap();
+function animateSurface(element,closing=false) {
+  const current=closing?getComputedStyle(element):null;
+  const from=closing?{opacity:current.opacity,transform:current.transform}:{opacity:0,transform:'translateY(12px)'};
+  surfaceAnimations.get(element)?.cancel();
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+  const animation=element.animate([from,closing?{opacity:0,transform:'translateY(8px)'}:{opacity:1,transform:'none'}],{
+    duration:closing?120:200,easing:EASE_OUT_QUAD,fill:closing?'forwards':'none'
+  });
+  surfaceAnimations.set(element,animation);
+  return animation;
+}
+let closingModal=false;
+async function closeModal() {
+  const modal=$('modal');
+  if(closingModal||!modal.open) return;
+  closingModal=true;
+  modal.dataset.closing='';
+  const animation=animateSurface(modal,true);
+  if(animation) await animation.finished.catch(()=>{});
+  modal.close();
+  animation?.cancel();
+  delete modal.dataset.closing;
+  closingModal=false;
+}
+$('modal').addEventListener('cancel',event=>{event.preventDefault();void closeModal();});
+let backdropPointerDown=false;
+function isBackdrop(event) {
+  if(event.target!==$('modal')) return false;
+  const rect=$('modal').getBoundingClientRect();
+  return event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom;
+}
+$('modal').addEventListener('pointerdown',event=>{backdropPointerDown=isBackdrop(event);});
+$('modal').addEventListener('click',event=>{
+  if(backdropPointerDown&&isBackdrop(event)) void closeModal();
+  backdropPointerDown=false;
+});
+function openModal(title,html,{fullScreen=false}={}) {
+  $('modal-title').textContent=title;
+  $('modal-title').hidden=title==='Records';
+  $('modal').classList.toggle('records-dialog',title==='Records');
+  $('modal-body').innerHTML=html;
+  $('modal').classList.toggle('help-dialog',fullScreen);
+  $('modal').showModal();
+  $('modal').scrollTop=0;
+  animateSurface($('modal'));
+}
 function openHelp() {
-  openModal("How to play",helpHTML()+(localDevelopment?`<details><summary>Development</summary><button id="reset-test" class="secondary">Reset this attempt</button><p><a href="${testMode?"./":"?test=16"}">${testMode?"Daily game":"Try 16 cards"}</a></p></details>`:""));
+  openModal("How to play",helpHTML()+(localDevelopment?`<details class="help-development"><summary>Development</summary><button id="reset-test" class="secondary">Reset this attempt</button><p><a href="${testMode?"./":"?test=16"}">${testMode?"Daily game":"Try 16 cards"}</a></p></details>`:""),{fullScreen:true});
 }
 function recordSummary() {
   const completed=Object.values(attempts).filter(s=>s.phase==='complete');
@@ -237,7 +291,7 @@ function recordSummary() {
     const d=generate(s.number),g=handGroups(d.board,d.community),{place}=resultInfo(s,d,g);
     medals[Math.min(place-1,3)]++;
   }
-  return {completed:completed.length,current,best,medals};
+  return {completed:completed.length,current,best,medals,hasOvertime:completed.some(s=>s.overtime)};
 }
 function openRecords() {
   includeOvertime=!!(state?.phase==='complete'&&state.overtime);
@@ -245,10 +299,12 @@ function openRecords() {
 }
 function renderRecords() {
   const r=recordSummary();
-  $('modal-body').innerHTML=`<div class="record-grid"><div><strong>${r.completed}</strong><span>Played</span></div><div><strong>${r.current}</strong><span>Play streak</span></div><div><strong>${r.best}</strong><span>Best streak</span></div></div><div class="section-divider"><span>YOUR HANDS</span></div><div class="record-grid medals">${r.medals.map((n,i)=>`<div><span>${['🥇','🥈','🥉','🃏'][i]}</span><strong>${n}</strong></div>`).join('')}</div><label class="checkbox-label"><input id="include-overtime" type="checkbox" ${includeOvertime?'checked':''}> Include overtime</label>`;
-  $('include-overtime').addEventListener('change',e=>{includeOvertime=e.target.checked;renderRecords();$('include-overtime').focus();});
+  $('modal-body').innerHTML=`<div class="record-grid"><div><strong>${r.completed}</strong><span>Played</span></div><div><strong>${r.current}</strong><span>Play streak</span></div><div><strong>${r.best}</strong><span>Best streak</span></div></div><div class="section-divider"><span>YOUR HANDS</span></div><div class="record-grid medals">${r.medals.map((n,i)=>`<div><span>${['🥇','🥈','🥉','🃏'][i]}</span><strong>${n}</strong></div>`).join('')}</div>${r.hasOvertime?`<label class="checkbox-label"><input id="include-overtime" type="checkbox" ${includeOvertime?'checked':''}> Include overtime</label>`:''}`;
+  $('include-overtime')?.addEventListener('change',e=>{includeOvertime=e.target.checked;renderRecords();$('include-overtime').focus();});
 }
+const copyFeedback=new WeakMap();
 async function share(useNative=true) {
+  const button=$(useNative?'share':'copy-result');
   const url=includeLink?new URL('./',location.href).href:'';
   const {place,ms}=resultInfo();
   let text=shareText(activeNumber,place,ms,state.overtime,url);
@@ -263,7 +319,12 @@ async function share(useNative=true) {
   }
   try {
     await navigator.clipboard.writeText(text);
-    $('share-feedback').textContent='Copied!';
+    const previous=copyFeedback.get(button);
+    clearTimeout(previous?.timer);
+    const html=previous?.html ?? button.innerHTML;
+    button.textContent='Copied!';
+    const timer=setTimeout(()=>{button.innerHTML=html;copyFeedback.delete(button);},1000);
+    copyFeedback.set(button,{html,timer});
   } catch {
     openModal('Share','<textarea id="share-copy" readonly rows="3" aria-label="Share result"></textarea>');
     $('share-copy').value=text;$('share-copy').select();

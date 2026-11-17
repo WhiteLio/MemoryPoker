@@ -1,0 +1,20 @@
+/* Shared type, spacing, and page geometry. */
+:root {
+  --font-display: 'Cinzel', Georgia, serif;
+  --font-ui: Arial, Helvetica, sans-serif;
+  --font-korean: ShowKorean, Batang, serif;
+  --font-timer: 'Cinzel Timer', 'Cinzel', Georgia, serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --page-gutter: var(--space-5);
+  --content-max: 470px;
+  --text-secondary: rgb(248 247 242 / 72%);
+  --text-muted: rgb(248 247 242 / 60%);
+  --type-caption: 400 12px/1.5 var(--font-ui);
+  --type-body: 400 14px/1.6 var(--font-ui);
+}

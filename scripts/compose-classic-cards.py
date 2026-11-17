@@ -18,7 +18,7 @@ font = TTFont(ROOT / 'assets/fonts/Besley-Variable.ttf')
 glyphs = font.getGlyphSet(location={'wght':500})
 cmap = font.getBestCmap()
 
-def value_art(rank):
+def value_geometry(rank):
     pen = SVGPathPen(glyphs)
     bounds = BoundsPen(glyphs)
     offset = 0
@@ -29,10 +29,24 @@ def value_art(rank):
         glyph.draw(TransformPen(bounds,transform))
         offset += glyph.width
     x0,y0,x1,y1 = bounds.bounds
-    sx = (32 if rank=='10' else 30)/(x1-x0)
-    sy = 42/(y1-y0)
-    return (f'<g data-card-value="Besley" transform="translate({7-x0*sx} {8+y1*sy}) '
-            f'scale({sx} {-sy})"><path d="{pen.getCommands()}"/></g>')
+    return pen.getCommands(), bounds.bounds
+
+VALUES = {rank: value_geometry(rank) for rank in ['A','2','3','4','5','6','7','8','9','10','J','Q','K']}
+# One font size for every rank; the widest value defines the corner's width.
+VALUE_SCALE = 1.6*min(32/(VALUES['10'][1][2]-VALUES['10'][1][0]),
+                  42/max(box[3]-box[1] for _,box in VALUES.values()))
+PIP_Y = 8 + max(box[3]-box[1] for _,box in VALUES.values())*VALUE_SCALE + 10 + 13.5
+
+def index_left(rank):
+    return 7 if rank in ['10','J','Q','K'] else 14
+
+def index_top(rank):
+    return 8 if rank in ['10','J','Q','K'] else 11
+
+def value_art(rank):
+    path, (x0,y0,x1,y1) = VALUES[rank]
+    return (f'<g data-card-value="Besley" transform="translate({index_left(rank)-x0*VALUE_SCALE} {index_top(rank)+y1*VALUE_SCALE}) '
+            f'scale({VALUE_SCALE} {-VALUE_SCALE})"><path d="{path}"/></g>')
 
 # Reuse the source suit outlines, independently of their original placement.
 boxes = {'C': '38 14 20 21', 'D': '-8 -10.5 16 21',
@@ -65,7 +79,7 @@ for source in SOURCE.glob('*.svg'):
     rank, suit = source.stem[:-1], source.stem[-1]
     color = '#b3232b' if suit in 'DH' else '#17191c'
     # Corner indices are larger and closer to the edge than the original art.
-    index = value_art(rank)+pip(suit,22,81,25,27)
+    index = value_art(rank)+pip(suit,index_left(rank)+(VALUES[rank][1][2]-VALUES[rank][1][0])*VALUE_SCALE/2,PIP_Y+index_top(rank)-8,25,27)
     body = ''
     if rank in ['J','Q','K'] or source.stem == 'AS':
         original = ET.parse(source).getroot()
@@ -88,6 +102,8 @@ for source in SOURCE.glob('*.svg'):
         number = 1 if rank == 'A' else int(rank)
         body = ''.join(pip(suit,x,y,82 if number==1 else 58,88 if number==1 else 62,y>175)
                        for x,y in positions(number))
+    if rank.isdigit():
+        body = '<g transform="translate(125 175) scale(.8) translate(-125 -175)">'+body+'</g>'
     svg = ('<svg xmlns="http://www.w3.org/2000/svg" width="250" height="350" viewBox="0 0 250 350">'
            f'<title>{escape(rank+suit)}</title><rect width="250" height="350" rx="10" fill="#f8f7f2"/>'
            f'<g fill="{color}">{body}{index}<g transform="rotate(180 125 175)">{index}</g></g></svg>')

@@ -1,5 +1,16 @@
 # Verification notes
 
+## Proportional card values and copy feedback, November 17, 2026
+
+Confirmed the old generator independently scaled value width and height. All 52 classic SVGs now use one uniform scale based on the 10’s 32-unit width; maximum value height is 27.20 units, with an 8-unit top margin and 10-unit minimum gap above corner suit pips. The existing card-asset regression now checks both corners on all 52 faces for equal X/Y scale magnitudes and a shared font size. Browser inspection confirmed Copy result temporarily becomes Copied! and restores, with the action row staying at the same position and height and no feedback row. Pair symbols have no ampersand; pair counts use Cinzel with SVG disclosure chevrons.
+
+## Violet interface refinement, November 17, 2026
+
+All 15 automated tests pass, including new concise hand-label coverage for pair ranks, necessary kickers, and royal flushes. `node --check src/app.js` and `git diff --check` pass.
+
+In-app browser checks confirmed welcome copy, weekday/card count, full date, sans-serif HH:MM countdown, continuous pointed plaque borders, visible darkened concrete, result action buttons, rank-specific best-hand labels, and violet Records/Help dialogs with icon-only close controls. Records correctly omitted Include overtime with no overtime completions. At 320x568, the 16-card selection screen measured 320px wide and 568px tall, with Submit ending at y=553; selected cards had black shadows and no pseudo-element checkmark. The same test run completed through foreground deadline auto-submission. The temporary test attempt was reset; the daily result was preserved. The 390px results layout had no horizontal overflow and retained vertical scrolling. Physical device checks remain pending.
+
+
 ## Current card-value font
 
 Card values now use Besley Medium 500 from Google Fonts, converted to self-contained SVG paths on all 52 faces. Cinzel remains the interface/back font; the renamed fixed-width Cinzel derivative remains the timer font. Besley and its OFL notice are bundled. All 14 tests pass with Besley outlines and no embedded bitmap lettering.

@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {evaluate, handGroups, suit} from '../src/poker.js';
+import {evaluate, handGroups, handLabels, suit} from '../src/poker.js';
 import {generate, challengeNumber, hasEasyPattern, PROFILES} from '../src/generator.js';
-import {newAttempt,ready,advance,selectCard,submit,deadline,shareText} from '../src/state.js';
+import {newAttempt,ready,advance,selectCard,submit,deadline,shareText,formatNextDeal} from '../src/state.js';
 import {cardPath} from '../src/cards.js';
 import {readFile} from 'node:fs/promises';
 
@@ -92,6 +92,7 @@ test('all 52 downloaded card faces map correctly and contain no active or extern
   assert.equal(new Set(paths).size,52);
   assert.equal(cardPath(c(14,3)),'./assets/cards/classic/AS.svg');
   assert.equal(cardPath(c(12,1)),'./assets/cards/classic/QD.svg');
+  let valueScale;
   for(const path of paths) {
     const svg=await readFile(new URL('../'+path,import.meta.url),'utf8');
     assert.match(svg,/<svg/);
@@ -100,5 +101,39 @@ test('all 52 downloaded card faces map correctly and contain no active or extern
     assert.doesNotMatch(svg,/<(?:linear|radial)Gradient\b/);
     assert.doesNotMatch(svg,/<filter\b|filter:url\(/);
     assert.match(svg,/data-card-value="Besley"/);
+    const values=[...svg.matchAll(/data-card-value="Besley" transform="translate\([^)]+\) scale\(([-\d.eE]+) ([-\d.eE]+)\)"/g)];
+    assert.equal(values.length,2,'both corners retain vector values');
+    for(const value of values) {
+      const sx=Number(value[1]),sy=Number(value[2]);
+      assert.ok(sx>0 && sy<0 && Math.abs(sx+sy)<1e-12,'value proportions are preserved');
+      valueScale ??= sx;
+      assert.equal(sx,valueScale,'all ranks use the same font size');
+    }
   }
+});
+
+test('hand summaries identify pairs and add only distinguishing kickers',()=>{
+  const hands=[
+    [c(14),c(14,1),c(13),c(11),c(6)],
+    [c(7),c(7,1),c(13),c(11),c(6)],
+    [c(5),c(5,1),c(13),c(11),c(6)]
+  ];
+  assert.deepEqual(handLabels(hands.map(evaluate)),['Ace Pair','7 Pair','5 Pair']);
+  const tiedPair=[
+    [c(7),c(7,1),c(14),c(13),c(6)],
+    [c(7),c(7,1),c(14),c(12),c(6)],
+    [c(7),c(7,1),c(14),c(12),c(5)]
+  ].map(evaluate);
+  const labels=handLabels(tiedPair);
+  assert.deepEqual(labels,['7 Pair + King Kicker','7 Pair + Queen, 6 Kickers','7 Pair + Queen, 5 Kickers']);
+  assert.equal(new Set(labels).size,3);
+  assert.deepEqual(handLabels([evaluate([c(14),c(13),c(12),c(11),c(10)])]),['Royal flush']);
+});
+
+test('next-deal copy uses whole hours, then minutes, with a one-minute minimum',()=>{
+  assert.equal(formatNextDeal(21*3600000+59*60000),'21hrs');
+  assert.equal(formatNextDeal(3600000),'1hr');
+  assert.equal(formatNextDeal(3599999),'59mins');
+  assert.equal(formatNextDeal(60000),'1min');
+  assert.equal(formatNextDeal(1),'1min');
 });

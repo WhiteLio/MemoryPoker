@@ -40,3 +40,28 @@ export function handGroups(board, community) {
   }
   return [...groups.values()].sort((a,b)=>b.score-a.score);
 }
+
+// Decode the comparison key so labels stay consistent with the evaluator's tie breaks.
+export function handLabels(groups) {
+  const value = n => ({11:'Jack',12:'Queen',13:'King',14:'Ace'}[n] || String(n));
+  const descriptions = groups.map(group => {
+    let key=group.score;
+    const ranks=Array(5);
+    for(let i=4;i>=0;i--) {ranks[i]=key%15;key=Math.floor(key/15);}
+    const [a,b]=ranks;
+    const base=[`${value(a)} high`,`${value(a)} Pair`,`${value(a)} & ${value(b)} Pairs`,
+      `Three ${value(a)}s`,`${value(a)}-high Straight`,`${value(a)}-high Flush`,
+      `${value(a)}s full of ${value(b)}s`,`Four ${value(a)}s`,group.name==='Royal flush'?'Royal flush':`${value(a)}-high Straight flush`][group.category];
+    return {base,ranks,used:[1,1,2,1,1,1,2,1,1][group.category]};
+  });
+  return descriptions.map((entry,index)=>{
+    const peers=descriptions.filter((other,i)=>i!==index && other.base===entry.base);
+    if(!peers.length) return entry.base;
+    const extras=[];
+    for(let i=entry.used;i<5;i++) {
+      if(peers.some(other=>other.ranks[i]!==entry.ranks[i])) extras.push(value(entry.ranks[i]));
+      if(peers.every(other=>other.ranks.slice(entry.used,i+1).some((n,j)=>n!==entry.ranks[entry.used+j]))) break;
+    }
+    return entry.base+(extras.length?` + ${extras.join(', ')} ${extras.length===1?'Kicker':'Kickers'}`:'');
+  });
+}
