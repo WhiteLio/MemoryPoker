@@ -18,6 +18,8 @@
 - Isolated browser lifecycle QA, tab-safe saves/replays, keyboard phase focus, and live announcements.
 - Enlarged-text reflow checks and JavaScript reduced-motion verification.
 
+- Public GitHub Pages deployment and MIT source license, with third-party notices retained.
+
 ## Remaining before release
 
 1. **Difficulty tuning.** Review a broad sample of generated weeks. Track top-three pair counts and pattern strength, then playtest memorization difficulty. The current weekly profiles are provisional. Sunday is a patterned 16-card special.
@@ -25,7 +27,7 @@
 3. **Mobile sharing.** Test native sharing, copying, fallback, and cancellation on iOS Safari and Android Chrome.
 4. **Reliability.** Browser-test foreground automatic submission, background deadlines, refresh near the deadline, midnight reset, older unfinished games, and multiple tabs. Automated rules and an isolated browser harness cover these scenarios, including stale-tab replay and streaks across rollover. Physical device testing remains.
 5. **Accessibility.** Keyboard focus, dialog return focus, live-region semantics, enlarged-text reflow, and the JavaScript reduced-motion path have been checked. Confirm actual spoken output with VoiceOver/TalkBack/NVDA and native reduced-motion settings; complete a formal contrast audit before claiming accessibility conformance.
-6. **Release settings.** Confirm the public start date, select a license, establish a version activation policy, create the repository, and publish on GitHub Pages. Test relative paths on the actual repository URL.
+6. **Release settings.** Confirm the official start date and establish a generator version activation policy. Public beta uses the provisional numbering.
 
 ## Optional after launch
 

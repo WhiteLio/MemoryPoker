@@ -79,9 +79,9 @@ This is an independent fan project, not affiliated with or endorsed by Netflix o
 
 ## Endless difficulty review
 
-Choose Endless on the cover, select a weekday difficulty, and enter a seed or use Random seed. Play starts immediately. Next deal advances the seed while keeping the difficulty; Replay seed repeats the same board. Difficulty in the game toolbar reopens the picker. Daily game returns to the daily challenge.
+Choose Endless on the cover and select a difficulty preset or Custom. Start Timer begins memorization immediately with a random deal. Next deal keeps the settings; Replay deal repeats the same board. Change difficulty reopens the picker. Daily game returns to the daily challenge.
 
-Endless uses separate saved progress and does not affect daily records or streaks. The URL records difficulty and seed for reproducible comparisons. Each seed represents a generated week using the unchanged daily v1 generator; weekdays select that week's exact daily profile. Sunday randomly uses columns or diagonals.
+Endless uses separate saved progress and does not affect daily records or streaks. Shared URLs retain the settings and internal seed for reproducible comparisons.
 
 ### Experimental obvious answers
 
@@ -91,7 +91,7 @@ After each endless round, Difficulty review shows the best and second-best categ
 
 ### Independent practice controls
 
-The Endless picker now defaults to independent controls: 8/12/16 cards; columns, rows, diagonals, blocks, mirrored pairs, rings, spiral, or shuffled arrangement; and Very clear, Clear, Competing, or Unrestricted answer clarity. Beginner is the default preset. Difficulty presets set these controls without changing the daily schedule; choose Custom to reveal and adjust them. Each new game picks a random seed internally; the picker does not expose it. Shared URLs retain the seed for reproducibility. Start Timer begins memorization immediately. Original daily profiles and the earlier royal-flush/quads experiment remain available under Original daily / early experiment.
+Custom exposes independent controls: 8/12/16 cards; columns, rows, diagonals, blocks, mirrored pairs, rings, spiral, or shuffled arrangement; and Very clear, Clear, Competing, or Unrestricted answer clarity. Beginner is the default preset. Difficulty presets set these controls without changing the daily schedule; choose Custom to reveal and adjust them. Each new game picks a random seed internally; the picker does not expose it. Shared URLs retain the seed for reproducibility. Start Timer begins memorization immediately. Original daily profiles and the earlier royal-flush/quads experiment remain available under Original daily / early experiment.
 
 Very clear requires a unique winning pair, trips or better, and a category gap of at least two. Clear requires trips or better and a category gap of at least one. Competing requires at least two distinct hand strengths in the winning category. Unrestricted has no clarity filter. Candidate targets include royal flushes, quads, full houses, flushes, straights, trips, and random hands. Actual distributions depend on card count and suit pattern; these controls are experimental constraints, not validated difficulty ratings or a promise of equal hand-category frequency.
 

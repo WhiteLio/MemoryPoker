@@ -105,7 +105,7 @@ function render() {
   const previousBoardTop=$('board').getBoundingClientRect().top;
   const oldFocus=document.activeElement?.dataset.position;
   $('edition').textContent=`#${activeNumber} · ${new Date(deal.date+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'})}`;
-  if(endlessMode) $('edition').textContent=`${lab?CLARITIES[lab.clarity]:clearMode?'Obvious answer':'Endless'} · Seed ${endless.seed}`;
+  if(endlessMode) $('edition').textContent=`${lab?CLARITIES[lab.clarity]:clearMode?'Obvious answer':'Endless'}`;
   $('next-deal').hidden=endlessMode;
   $('records').hidden=endlessMode;
   $('puzzle-records').hidden=endlessMode;
@@ -128,7 +128,7 @@ function render() {
   const text={intro:['','Memorise',''],opening:['','Memorise',''],memorize:['','Memorise',''],conceal:['','Choose 2',''],select:['','Choose 2',''],complete:['','Results','']}[phase];
   $('phase-label').textContent=text[0]; $('instruction').textContent=text[1]; $('detail').textContent=text[2];
   $('phase-label').hidden=!text[0]; $('detail').hidden=!text[2];
-  if(endlessMode) {$('phase-label').textContent=`${lab?`${lab.count} cards · ${PATTERNS[lab.pattern]}`:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][endless.profile]} · Seed ${endless.seed}`;$('phase-label').hidden=false;}
+  if(endlessMode) {$('phase-label').textContent=`${lab?`${lab.count} cards · ${PATTERNS[lab.pattern]}`:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][endless.profile]}`;$('phase-label').hidden=false;}
   $('community').hidden=!playing||!['select','complete'].includes(phase);
   $('community-cards').innerHTML=['select','complete'].includes(phase)?deal.community.map(c=>cardHTML(c,-1)).join(''):'';
   const concealed=!playing||['conceal','select','intro'].includes(phase);
@@ -241,7 +241,7 @@ function renderResults() {
   const metrics=endlessMode?difficultyMetrics(deal.board,deal.community):null;
   const review=metrics?`<details class="difficulty-review" open><summary>Difficulty review</summary><dl><dt>Best → second</dt><dd>${metrics.best} → ${metrics.second}</dd><dt>Category gap</dt><dd>${metrics.categoryGap} ${metrics.categoryGap===1?'tier':'tiers'}</dd><dt>Winning pairs</dt><dd>${metrics.winningPairs} / ${metrics.totalPairs}</dd><dt>Same-category rivals</dt><dd>${metrics.sameCategoryPairs} pairs</dd><dt>Shared cards in combination</dt><dd>${metrics.sharedContributors} / 3</dd></dl><p>A larger category gap is a clarity signal, not a measured difficulty score.</p></details>`:'';
   const placing=place===1?'Best hand':`${place===2?'2nd':place===3?'3rd':`#${place}`} best hand`;
-  $('results').innerHTML=`${endlessMode?'<div class="endless-result-actions"><button class="primary" id="endless-next">Next deal</button><button class="secondary" id="endless-replay">Replay seed</button><button class="text-button" id="endless-config">Change difficulty</button></div>':''}<div class="result-card"><div class="result-medal">${badge(place)}</div><div><p class="eyebrow">${placing}${state.overtime?' · OVERTIME':''}</p><h2>${resultLabel}</h2><p class="memorized-time">memorized in ${formatTime(ms)}</p></div></div><div class="result-actions"><button id="copy-result" class="secondary">Copy result</button><button id="share" class="primary">Share <svg class="share-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10H5v11h14V10h-3M12 15V3m-4 4 4-4 4 4"/></svg></button></div><label class="checkbox-label share-link-option"><input id="include-link" type="checkbox" ${includeLink?'checked':''}> Include link</label><div class="section-divider"><span>BEST HANDS</span></div><div class="best-hands">${groups.slice(0,3).map((g,i)=>`<details ${i===0?'open':''}><summary><span>${badge(i+1)} ${labels[i]}</span><span>${g.pairs.length} ${g.pairs.length===1?'pair':'pairs'} <svg class="pairs-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></summary><div class="pair-list">${g.pairs.map(pair=>`<div class="pair"><b>${pair.map(p=>String.fromCharCode(65+p)).join(' + ')}</b><span>${pair.map(p=>`<span class="${[1,2].includes(suit(deal.board[p]))?'red':''}">${cardText(deal.board[p])}</span>`).join(' ')}</span></div>`).join('')}</div></details>`).join('')}</div>${review}`;
+  $('results').innerHTML=`${endlessMode?'<div class="endless-result-actions"><button class="primary" id="endless-next">Next deal</button><button class="secondary" id="endless-replay">Replay deal</button><button class="text-button" id="endless-config">Change difficulty</button></div>':''}<div class="result-card"><div class="result-medal">${badge(place)}</div><div><p class="eyebrow">${placing}${state.overtime?' · OVERTIME':''}</p><h2>${resultLabel}</h2><p class="memorized-time">memorized in ${formatTime(ms)}</p></div></div><div class="result-actions"><button id="copy-result" class="secondary">Copy result</button><button id="share" class="primary">Share <svg class="share-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10H5v11h14V10h-3M12 15V3m-4 4 4-4 4 4"/></svg></button></div><label class="checkbox-label share-link-option"><input id="include-link" type="checkbox" ${includeLink?'checked':''}> Include link</label><div class="section-divider"><span>BEST HANDS</span></div><div class="best-hands">${groups.slice(0,3).map((g,i)=>`<details ${i===0?'open':''}><summary><span>${badge(i+1)} ${labels[i]}</span><span>${g.pairs.length} ${g.pairs.length===1?'pair':'pairs'} <svg class="pairs-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></summary><div class="pair-list">${g.pairs.map(pair=>`<div class="pair"><b>${pair.map(p=>String.fromCharCode(65+p)).join(' + ')}</b><span>${pair.map(p=>`<span class="${[1,2].includes(suit(deal.board[p]))?'red':''}">${cardText(deal.board[p])}</span>`).join(' ')}</span></div>`).join('')}</div></details>`).join('')}</div>${review}`;
 }
 function renderUnfinished() {$('unfinished').hidden=true;}
 function reconcile(options={}) {
@@ -410,7 +410,7 @@ async function share(useNative=true) {
   const url=includeLink?shareURL.href:'';
   const {place,ms}=resultInfo();
   let text=shareText(activeNumber,place,ms,state.overtime,url);
-  if(endlessMode) text=text.replace(`Memory Poker #${activeNumber}`,`Memory Poker · Endless · ${lab?`${lab.count} cards · ${PATTERNS[lab.pattern]} · ${CLARITIES[lab.clarity]}`:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][endless.profile]} · Seed ${endless.seed}`);
+  if(endlessMode) text=text.replace(`Memory Poker #${activeNumber}`,`Memory Poker · Endless · ${lab?`${lab.count} cards · ${PATTERNS[lab.pattern]} · ${CLARITIES[lab.clarity]}`:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][endless.profile]}`);
   if(testMode) text=text.replace(`Memory Poker #${activeNumber}`,'Memory Poker · Test');
   if(useNative && navigator.share) {
     try {
