@@ -153,3 +153,27 @@ body[data-screen=opening] .welcome {
   background-position: right 12px center;
 }
 .endless-form select:focus-visible { outline-color: #b99bd3; }
+
+body[data-screen=welcome] .welcome { min-height: calc(100dvh - 64px); }
+.site-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0 20px;
+  min-height: 64px;
+  width: min(100%, var(--content-max));
+  margin-inline: auto;
+  padding: 8px var(--page-gutter) 12px;
+  font: var(--type-caption);
+}
+.site-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.site-footer a:hover { color: #d8bce9; text-decoration: underline; }
+.site-footer a:focus-visible { outline: 2px solid #c4a6df; outline-offset: 2px; border-radius: 2px; }
+body[data-screen=opening] .site-footer { visibility: hidden; }

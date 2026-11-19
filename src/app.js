@@ -171,16 +171,21 @@ function render() {
 function fitLayout() {
   const width=window.visualViewport?.width||innerWidth;
   const height=window.visualViewport?.height||innerHeight;
-  const landscape=width>height&&height<600;
+  const memorising=(playing||introRunning)&&['intro','opening','memorize','conceal'].includes(document.querySelector('.game').dataset.phase);
   const table=document.querySelector('.table');
   const tableStyle=getComputedStyle(table);
   const contentWidth=table.clientWidth-parseFloat(tableStyle.paddingLeft)-parseFloat(tableStyle.paddingRight);
   const rows=deal.board.length/4, gap=height<700?6:8;
   const plaqueExtra=Math.max(0,document.querySelector('.plaque').getBoundingClientRect().height-26);
   document.documentElement.style.setProperty('--plaque-extra',`${plaqueExtra}px`);
-  const availableHeight=height-(landscape?92:height<700?230:266);
-  const cardHeight=(availableHeight-(rows-1)*gap)/(landscape?rows:rows+1);
-  const cardWidth=Math.max(24,Math.min(78,cardHeight/1.4,((landscape?contentWidth*.56:contentWidth)-3*gap)/4));
+  const gameStyle=getComputedStyle(document.querySelector('.game'));
+  const memoryChrome=$('puzzle-nav').getBoundingClientRect().height
+    +document.querySelector('.stage-heading').getBoundingClientRect().height
+    +Math.max(68,$('action-area').getBoundingClientRect().height)
+    +parseFloat(gameStyle.paddingTop)+parseFloat(gameStyle.paddingBottom)+2*gap+16;
+  const availableHeight=height-(memorising?memoryChrome:height<700?230:266);
+  const cardHeight=(availableHeight-(rows-1)*gap)/(memorising?rows:rows+1);
+  const cardWidth=Math.max(24,Math.min(78,cardHeight/1.4,(contentWidth-3*gap)/4));
   document.documentElement.style.setProperty('--card-width',`${cardWidth}px`);
   document.documentElement.style.setProperty('--grid-gap',`${gap}px`);
   document.documentElement.style.setProperty('--viewport-height',`${height}px`);
