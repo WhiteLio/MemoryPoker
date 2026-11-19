@@ -77,9 +77,9 @@
       <button id="puzzle-help" class="icon-button" aria-label="How to play" title="How to play"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 8.6a2.8 2.8 0 0 1 5.4 1c0 2-2.7 2.2-2.7 4.4M12 17v.2"/></svg></button>
     </div></nav>
     <section class="game" aria-label="Daily challenge">
-      <div class="stage-heading"><div><p class="eyebrow" id="phase-label"></p><h2 id="instruction" tabindex="-1"></h2></div><div class="clock"><strong id="clock" aria-label="Elapsed memorisation time">00:00</strong></div></div>
+      <div class="stage-heading"><div><p class="eyebrow" id="phase-label"></p><h2 id="instruction" tabindex="-1"></h2></div><div class="clock"><strong id="clock" aria-label="Elapsed memorisation time">00:00</strong></div><span id="recall-progress" class="recall-progress" role="progressbar" aria-label="Time remaining this question" aria-valuemin="0" aria-valuemax="20" aria-valuenow="20" hidden><span></span></span></div>
       <p class="stage-detail" id="detail"></p>
-      <div id="community" class="community" aria-label="Shared cards" hidden><span class="plaque pointed-plaque"><span lang="ko">공유 카드</span><span class="plaque-translation">Shared cards</span></span><div id="community-cards" class="community-cards"></div></div>
+      <div id="community" class="community" aria-label="Shared cards" hidden><span class="plaque-shadow"><span class="plaque pointed-plaque"><span lang="ko">공유 카드</span><span class="plaque-translation">Shared cards</span></span></span><div id="community-cards" class="community-cards"></div></div>
       <div id="board" class="board" aria-label="Memory card grid"></div>
       <div id="action-area" class="action-area"></div>
       <p id="status" class="status" role="status" aria-live="polite"></p>

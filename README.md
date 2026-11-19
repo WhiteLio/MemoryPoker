@@ -1,3 +1,20 @@
+# Five-question rules
+
+Each game has one memorisation stage followed by five timed recall questions.
+
+- Every daily and Endless board has 16 cards.
+- Memorise the board once, then answer five questions. Each uses three different shared cards; none overlap the board, and all 15 shared cards are distinct.
+- Select two positions per question. Positions may be reused in later questions. The board and all answers stay hidden until question five is finished.
+- Each question has its own 20-second timer and a bar that burns away from left to right. Memorisation has no countdown bar.
+- At expiry, the current selection locks. Fewer than two cards counts as unanswered. If expiry happens away from the game, the next question waits until the game is visible again.
+- Results show best hands found out of five, with per-question review. Saves use a separate namespace and do not alter existing single-question progress.
+- Weekday suit arrangements are retained. Endless settings choose the board and initial hand; the following four questions use varied shared cards, so old clarity labels do not guarantee the same clarity for every question.
+- The frozen v1 generator and single-question state engine remain available for compatibility and regression checks. `src/rounds.js` owns the current generation and timing.
+
+Run `npm start` and open <http://127.0.0.1:4173/>. `npm test` checks both the legacy rules and current round progression.
+
+---
+
 # Memory Poker
 
 Remember the cards. Find your best hand.
@@ -8,35 +25,30 @@ A daily, single-player memory game inspired by Memory Poker from *The Devil's Pl
 
 1. Start the daily challenge. Study the face-up grid for as long as you like. Your memorization clock is running.
 2. Press **Ready** to turn the grid face down.
-3. After one second, three shared cards appear. You have 20 seconds to select two cards from memory, making a five-card poker hand.
+3. Three shared cards arrive face down, then flip together after one second. You have 20 seconds to select two cards from memory, making a five-card poker hand.
 4. Submit when ready. Tapping a third card replaces your oldest selection. Tap a selected card to deselect it.
-5. See your hand, its rank among all achievable hands, and the three best hand groups.
+5. Repeat for five questions, then review each hand, its rank among all achievable hands, and the three best hand groups.
 
 The strongest achievable hand earns gold, the second silver, and the third bronze. Equivalent hands share a rank, including hands made using different pairs. Standard five-card poker rules apply, including kickers; suits do not break ties. Aces can be low in A-2-3-4-5 straights.
 
-If time runs out while you are viewing the game and two cards are selected, those cards are submitted. Otherwise you enter **overtime**, with unlimited time to choose and submit. If the deadline passes while you are away from the page, you enter overtime without automatic submission. Overtime marks your result but does not change your hand rank, and completed overtime games count toward your play streak.
+At 20 seconds, the current selection submits automatically. Fewer than two selected cards counts as unanswered. If a question expires while you are away, it is recorded, and the next question waits until you return.
 
 Share a spoiler-free result:
 
 ```text
-Memory Poker #123
-🥈0:42
-```
-
-```text
-Memory Poker #123
-12🃏0:42 · Overtime
+Memory Poker
+🥇🥈🥇🥉🥇 · 0:42
 ```
 
 The time is how long you spent memorizing, rounded down to whole seconds.
 
-Copy result writes directly to the clipboard and briefly shows Copied! Share opens the native share sheet on supported browsers; cancelling does nothing. Unsupported browsers direct players to Copy result, without silently copying. Both buttons use the public game URL, even in a local preview.
+Copy result writes directly to the clipboard and briefly shows Copied! Share opens the native share sheet on supported browsers; cancelling does nothing. Unsupported browsers direct players to Copy result, without silently copying. Both buttons link to the current game site.
 
 Shares include a link to the game by default. Uncheck **Include link** below Share to leave it out. Your choice is remembered in this browser.
 
 ## A different challenge every day
 
-The week moves from smaller, deliberately patterned grids toward random 16-card boards. Sunday is a patterned 16-card special. All deals and arrangements are generated automatically. No puzzle is handcrafted.
+Every day uses 16 cards, with weekday suit patterns ranging from deliberately patterned to shuffled boards. Sunday is a patterned 16-card special. All deals and arrangements are generated automatically. No puzzle is handcrafted.
 
 Progress saves in your browser, including timers and selections. Continue shows the running timer. After the daily reset, reopening or returning to the tab starts the new day's puzzle. A session that stays visible can finish the previous deal. Records and streaks belong to this browser and do not sync between devices. Clearing site data clears them. There are no accounts, analytics, player leaderboards, or result uploads in this version.
 
@@ -93,7 +105,7 @@ After each endless round, Difficulty review shows the best and second-best categ
 
 ### Independent practice controls
 
-Custom exposes independent controls: 8/12/16 cards; columns, rows, diagonals, blocks, mirrored pairs, rings, spiral, or shuffled arrangement; and Very clear, Clear, Competing, or Unrestricted answer clarity. Beginner is the default preset. Difficulty presets set these controls without changing the daily schedule; choose Custom to reveal and adjust them. Each new game picks a random seed internally; the picker does not expose it. Shared URLs retain the seed for reproducibility. Start Timer begins memorization immediately. Original daily profiles and the earlier royal-flush/quads experiment remain available under Original daily / early experiment.
+Custom exposes independent controls on a fixed 16-card board: columns, rows, diagonals, blocks, mirrored pairs, rings, spiral, or shuffled arrangement; and Very clear, Clear, Competing, or Unrestricted answer clarity. Beginner is the default preset. Difficulty presets set these controls without changing the daily schedule; choose Custom to reveal and adjust them. Each new game picks a random seed internally; the picker does not expose it. Shared URLs retain the seed for reproducibility. Start Timer begins memorization immediately. Original daily profiles and the earlier royal-flush/quads experiment remain available under Original daily / early experiment.
 
 Very clear requires a unique winning pair, trips or better, and a category gap of at least two. Clear requires trips or better and a category gap of at least one. Competing requires at least two distinct hand strengths in the winning category. Unrestricted has no clarity filter. Candidate targets include royal flushes, quads, full houses, flushes, straights, trips, and random hands. Actual distributions depend on card count and suit pattern; these controls are experimental constraints, not validated difficulty ratings or a promise of equal hand-category frequency.
 

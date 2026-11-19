@@ -6,6 +6,7 @@ export function mergeProgress(local,remote) {
     if(!other) {merged[key]=attempt;continue;}
     let chosen;
     if((attempt.generation||0)!==(other.generation||0)) chosen=(attempt.generation||0)>(other.generation||0)?attempt:other;
+    else if((attempt.roundIndex??0)!==(other.roundIndex??0)) chosen=(attempt.roundIndex??0)>(other.roundIndex??0)?attempt:other;
     else if(attempt.phase==='complete'&&other.phase==='complete') chosen=attempt.completedAt<other.completedAt?attempt:other;
     else if(phases[attempt.phase]!==phases[other.phase]) chosen=phases[attempt.phase]>phases[other.phase]?attempt:other;
     else chosen=(attempt.updatedAt||attempt.startedAt)>(other.updatedAt||other.startedAt)?attempt:other;

@@ -27,14 +27,14 @@ export function contributingIndices(cards) {
   });
 }
 export function helpHTML() {
-  return `<p class="help-intro">Remember the grid. Build the strongest five-card poker hand.</p>
+  return `<p class="help-intro">Memorise 16 cards once. Answer five questions from memory.</p>
     <ol class="help-steps">
-      <li><h3>Memorise</h3><p>Study the face-up grid for as long as you need. Tap <strong>Ready</strong> to turn the cards face down.</p></li>
-      <li><h3>Choose</h3><p>Three shared cards appear. Pick two cards from memory to make your strongest five-card hand. You have <strong>20 seconds</strong>.</p></li>
+      <li><h3>Memorise</h3><p>Study the 16-card face-up grid for as long as you need. Tap <strong>Ready</strong> to turn the cards face down.</p></li>
+      <li><h3>Choose</h3><p>Answer five questions in a row, each with three different shared cards. Pick two cards from memory to make your strongest five-card hand. You have <strong>20 seconds per question</strong>. The countdown bar burns away beneath the timer. All answers are revealed after question five.</p></li>
     </ol>
     <div class="help-details">
-      <details><summary>Selection & overtime</summary><p>Tap a selected card to deselect it. A third card replaces your oldest selection.</p><p>Tap Submit when ready. At 20 seconds, your selected pair submits automatically. With fewer than two cards selected, or if time expires while you are away, you enter overtime and submit when ready.</p><p>Overtime does not change your hand rank and still counts toward your streak.</p></details>
-      <details><summary>Your result</summary><p>Your hand is ranked against every possible pair in that deal. Equal hands share a rank.</p><p>The time on your result is how long you spent memorising.</p></details>
+      <details><summary>Selection & timing</summary><p>Tap a selected card to deselect it. A third card replaces your oldest selection.</p><p>Tap Next question to lock your pair, or Finish on question five. At 20 seconds, your selected cards submit automatically; fewer than two counts as unanswered. A question that expires while you are away is recorded, but the next timer waits until you return.</p><p>The same grid stays hidden across all five questions. You may reuse a position in different questions.</p></details>
+      <details><summary>Your result</summary><p>After question five, see how many best hands you found. Tap a question to review your pair, its rank, and the best possible hands. Equal hands share a rank.</p><p>The time on your result is how long you spent memorising.</p></details>
     </div>
     <section class="poker-reference" aria-labelledby="poker-guide-title">
       <h3 id="poker-guide-title">Poker hands</h3>

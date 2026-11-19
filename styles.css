@@ -100,3 +100,34 @@ details:not(.best-hands details) > summary::after {
   transition: transform 200ms cubic-bezier(.25,.46,.45,.94);
 }
 details[open]:not([data-closing]):not(.best-hands details) > summary::after { transform: rotate(180deg); }
+
+.recall-progress { display: block; width: 100%; height: 4px; margin-top: 6px; background: #b99bd326; border-radius: 2px; overflow: hidden; }
+.recall-progress > span { display: block; width: 100%; height: 100%; background: var(--bar-color, #4a3163); transform: scaleX(var(--remaining, 1)); transform-origin: right center; transition: transform 100ms linear; }
+.recall-progress.is-urgent > span { animation: recall-pulse 850ms ease-in-out infinite; }
+@keyframes recall-pulse { 50% { opacity: .45; } }
+.round-score { margin: 20px 0 16px; text-align: center; }
+.round-score strong { font: 500 22px/1.3 var(--font-display); }
+.round-score p { margin: 6px 0 0; font: var(--type-caption); color: var(--text-muted); }
+.round-tabs { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 6px; }
+.round-tabs .secondary { margin: 0; padding: 8px 2px; min-width: 0; gap: 4px; font: var(--type-caption); }
+.round-tabs [aria-pressed=true] { background: #b99bd326; border-color: #c4a6df; }
+
+/* Keep recall geometry identical while the next shared cards arrive. */
+.game:is([data-phase=conceal],[data-phase=select]){height:calc(var(--viewport-height,100dvh) - 52px);min-height:0;grid-template-rows:64px auto auto 76px;align-content:center}
+.game:is([data-phase=conceal],[data-phase=select]) .board{align-self:center}
+.game:is([data-phase=conceal],[data-phase=select]) .action-area{height:76px}
+.game[data-phase=conceal] .action-area{visibility:hidden}
+.community-cards{overflow:hidden;isolation:isolate}
+@media(max-height:700px){.game:is([data-phase=conceal],[data-phase=select]){height:calc(var(--viewport-height,100dvh) - 44px);grid-template-rows:56px auto auto 76px}}
+
+.game:is([data-phase=conceal],[data-phase=select]) .stage-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:1fr 4px;column-gap:12px;row-gap:6px;height:100%;min-height:0}
+.stage-heading > .recall-progress{grid-column:1/-1;margin:0;width:100%}
+.game[data-phase=conceal] .recall-progress{visibility:hidden}
+.game:is([data-phase=conceal],[data-phase=select]) .stage-heading .eyebrow{margin:0 0 2px}
+
+.community > .plaque-shadow{position:absolute;left:50%;top:0;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 3px #0008);z-index:1}
+.community .plaque-shadow > .plaque{position:relative;left:auto;top:auto;transform:none}
+.game[data-phase=conceal] .clock{visibility:hidden}
+
+body[data-screen] .game:is([data-phase=opening],[data-phase=memorize]){height:calc(var(--viewport-height,100dvh) - 52px);min-height:0;grid-template-rows:auto auto 68px;align-content:center}
+@media(max-height:700px){body[data-screen] .game:is([data-phase=opening],[data-phase=memorize]){height:calc(var(--viewport-height,100dvh) - 44px)}}
