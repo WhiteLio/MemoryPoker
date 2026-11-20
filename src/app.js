@@ -2,9 +2,9 @@ import {preloadMenu} from './loading.js';
 import {mergeProgress,storedProgress,resetProgress} from './persistence.js';
 import {PATTERNS,CLARITIES,PRESETS,practiceSettings,practiceKey} from './practice.js';
 import {difficultyMetrics} from './difficulty.js';
-import {DIFFICULTIES,MAX_SEED,endlessNumber,endlessSettings} from './endless.js';
+import {MAX_SEED,endlessNumber,endlessSettings} from './endless.js';
 import {challengeNumber} from './generator.js';
-import {generateRounds,ROUND_COUNT,SELECTION_TIME,newAttempt,ready,advance,submit,deadline} from './rounds.js';
+import {generateRounds,ROUND_COUNT,MEMORIZATION_TIME,roundShareText,SELECTION_TIME,newAttempt,ready,advance,submit,deadline} from './rounds.js';
 import {face, suit, SUITS, cardText, evaluate, handGroups, handLabels} from './poker.js';
 import {selectCard, formatTime, shouldReplaceDeal, formatNextDeal} from './state.js';
 import {cardPath,preloadCards} from './cards.js';
@@ -12,6 +12,28 @@ import {helpHTML} from './help.js';
 import {EASE_OUT_QUAD,newAttemptAfterIntro} from './intro.js';
 
 const $=id=>document.getElementById(id);
+function setButtonFire(button,enabled) {
+  if(!button) return;
+  button.classList.toggle('purple-fire',enabled);
+  if(button.querySelector('.fire-label')) {
+    if(enabled) return;
+    button.replaceChildren(...button.querySelector('.fire-label').childNodes);
+  }
+  if(!enabled) return;
+  const particles=(count,kind)=>Array.from({length:count},(_,i)=>{
+    const plume=kind==='plume';
+    const duration=plume?2.4+Math.random()*2.2:2.1+Math.random()*3.1;
+    const x=(i+.15+Math.random()*.7)/count*100;
+    const delay=-Math.random()*duration;
+    const drift=(Math.random()-.5)*(plume?20:26);
+    const size=plume?12+Math.random()*10:1.2+Math.random()*1.6;
+    const rise=plume?16+Math.random()*12:24+Math.random()*16;
+    return `<i style="--x:${x}%;--delay:${delay}s;--duration:${duration}s;--drift:${drift}px;--size:${size}px;--rise:-${rise}px"></i>`;
+  }).join('');
+  const label=document.createElement('span');label.className='fire-label';
+  label.append(...button.childNodes);button.append(label);
+  button.insertAdjacentHTML('beforeend',`<span class="fire-plumes" aria-hidden="true">${particles(36,'plume')}</span><span class="fire-chamber" aria-hidden="true">${particles(7,'ember')}</span>`);
+}
 // The small viewport stays stable when mobile browser controls expand or collapse.
 const layoutViewport=document.createElement('div');
 layoutViewport.setAttribute('aria-hidden','true');
@@ -19,10 +41,14 @@ layoutViewport.style.cssText='position:fixed;width:0;height:100svh;visibility:hi
 document.body.append(layoutViewport);
 const localDevelopment=['localhost','127.0.0.1','[::1]'].includes(location.hostname);
 const testMode=localDevelopment&&new URLSearchParams(location.search).get('test')==='16';
-const endlessMode=new URLSearchParams(location.search).get('mode')==='endless';
+const endlessMode=['practice','endless'].includes(new URLSearchParams(location.search).get('mode'));
 const endless=endlessSettings(location.search);
 const chosenLab=endlessMode?practiceSettings(location.search):null;
 const lab=chosenLab?{...chosenLab,count:16}:null;
+const requestedPreset=Number(new URLSearchParams(location.search).get('preset')??-1);
+const matchesPreset=p=>lab&&p.pattern===lab.pattern&&p.clarity===lab.clarity;
+const practicePreset=Number.isInteger(requestedPreset)&&matchesPreset(PRESETS[requestedPreset]||{})?requestedPreset:PRESETS.findIndex(matchesPreset);
+const practiceDifficulty=PRESETS[practicePreset]?.name||'Practice';
 const clearMode=endlessMode&&new URLSearchParams(location.search).get('answers')==='clear';
 const generate=number=>generateRounds(number);
 const practiceGenerate=number=>generateRounds(number,lab);
@@ -30,12 +56,12 @@ const LEGACY_KEY=lab?`memory-poker:lab:v1:${practiceKey(lab)}`:endlessMode?(clea
 const KEY=`memory-poker:five-rounds:v1:${LEGACY_KEY}`;
 let reviewRound=0;
 const PREFERENCES_KEY='memory-poker:preferences:v1';
-let includeLink=true;
-try {includeLink=JSON.parse(localStorage.getItem(PREFERENCES_KEY) || '{}').includeLink!==false;} catch { /* Defaults remain usable without storage. */ }
+let includeLink=true,hardMode=false;
+try {const preferences=JSON.parse(localStorage.getItem(PREFERENCES_KEY) || '{}');includeLink=preferences.includeLink!==false;hardMode=preferences.hardMode===true;} catch { /* Defaults remain usable without storage. */ }
 let attempts={}, storageOK=true, storageWarning='';
 function validAttempt(s,key) {
   if(s?.phase==='reset') return s.number===Number(key)&&Number.isInteger(s.number)&&s.number>0&&s.number<=(testMode||endlessMode?1000000:Math.max(1,challengeNumber()))&&Number.isFinite(s.generation)&&s.generation>0&&Array.isArray(s.selected)&&s.selected.length===0;
-  return s && s.number===Number(key) && Number.isInteger(s.number) && s.number>0 && s.number<=(testMode||endlessMode?1000000:challengeNumber()) && s.version===2 &&
+  return s && s.number===Number(key) && Number.isInteger(s.number) && s.number>0 && s.number<=(testMode||endlessMode?1000000:challengeNumber()) && s.version===2 && (s.hardMode===undefined||typeof s.hardMode==='boolean') &&
     Number.isInteger(s.roundIndex)&&s.roundIndex>=0&&s.roundIndex<ROUND_COUNT&&Array.isArray(s.answers)&&s.answers.length===(s.phase==='complete'?ROUND_COUNT:s.roundIndex)&&
     s.answers.every(a=>Array.isArray(a.selected)&&a.selected.length<=2&&new Set(a.selected).size===a.selected.length&&a.selected.every(i=>Number.isInteger(i)&&i>=0&&i<16)&&typeof a.timedOut==='boolean'&&Number.isFinite(a.answeredAt))&&
     (s.roundStartedAt===null||Number.isFinite(s.roundStartedAt))&&
@@ -126,14 +152,14 @@ function render() {
   const leavingControls=movingToRecall?[$('ready'),document.querySelector('.clock')].filter(Boolean).map(element=>({clone:element.cloneNode(true),rect:element.getBoundingClientRect()})):[];
   const oldFocus=document.activeElement?.dataset.position;
   $('edition').textContent=`#${activeNumber} · ${new Date(deal.date+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'})}`;
-  if(endlessMode) $('edition').textContent=`${lab?CLARITIES[lab.clarity]:clearMode?'Obvious answer':'Endless'}`;
+  if(endlessMode) $('edition').textContent='Practice';
   $('next-deal').hidden=endlessMode;
   $('records').hidden=endlessMode;
   $('puzzle-records').hidden=endlessMode;
-  $('endless-entry').textContent=endlessMode?'Change difficulty':'Endless';
+  $('endless-entry').textContent=endlessMode?'Change difficulty':'Practice';
   $('daily-entry').hidden=!endlessMode;
   $('endless-tools').hidden=!endlessMode;
-  document.querySelector('.game').setAttribute('aria-label',endlessMode?'Endless challenge':'Daily challenge');
+  document.querySelector('.game').setAttribute('aria-label',endlessMode?'Practice challenge':'Daily challenge');
   $('welcome').hidden=playing&&!introRunning;
   document.querySelector('.game').hidden=false;
   document.querySelector('.game').inert=!playing||introRunning;
@@ -144,8 +170,12 @@ function render() {
   document.body.dataset.screen=introRunning?'opening':playing?(phase==='complete'?'result':'puzzle'):'welcome';
   $('enter-game').innerHTML=state?(phase==='complete'?'View result':'<span>Continue</span><span aria-hidden="true">·</span><span id="continue-clock" class="timer-readout"></span>'):'Start Timer';
   $('enter-game').disabled=!assetsReady||introRunning;
-  $('difficulty').textContent=`${new Date(deal.date+'T12:00:00Z').toLocaleDateString('en',{weekday:'long',timeZone:'UTC'})} · ${deal.board.length} cards`;
-  if(endlessMode) $('difficulty').textContent=lab?`${lab.count} cards · ${PATTERNS[lab.pattern]} · ${CLARITIES[lab.clarity]}`:DIFFICULTIES[endless.profile].replace(/\d+ cards/,'16 cards');
+  setButtonFire($('enter-game'),state?state.hardMode&&state.phase!=='complete':hardMode);
+  $('hard-mode').checked=state&&state.phase!=='complete'?!!state.hardMode:hardMode;
+  $('hard-mode').disabled=introRunning||!!(state&&state.phase!=='complete');
+  const dailyDifficulty=['Beginner','Easy','Moderate','Intermediate','Hard','Expert','Special'][(new Date(deal.date+'T12:00:00Z').getUTCDay()+6)%7];
+  $('difficulty').textContent=`${new Date(deal.date+'T12:00:00Z').toLocaleDateString('en',{weekday:'long',timeZone:'UTC'})} · ${dailyDifficulty}`;
+  if(endlessMode) $('difficulty').textContent=practiceDifficulty;
   const text={intro:['','Memorise',''],opening:['','Memorise',''],memorize:['','Memorise',''],conceal:['','Choose 2',''],select:['','Choose 2',''],complete:['','Results','']}[phase];
   $('phase-label').textContent=text[0]; $('instruction').textContent=text[1]; $('detail').textContent=text[2];
   $('phase-label').hidden=!text[0]; $('detail').hidden=!text[2];
@@ -164,6 +194,7 @@ function render() {
   $('board').classList.toggle('full-board',deal.board.length===16);
   $('board').classList.toggle('pair-chosen',['select','complete'].includes(phase)&&visibleSelection.length===2);
   document.querySelector('.game').dataset.phase=phase;
+  document.querySelector('.game').classList.toggle('hard-memory',!!(state?state.hardMode:hardMode));
   $('action-area').innerHTML=phase==='intro'?`<p class="deal-note">${deal.modifier==='columns'?'Suits in columns':deal.modifier==='diagonals'?'Suits on diagonals':'Shuffled'}</p><button class="primary" id="start">Start Timer <span>♠</span></button><p class="fine-print">Study as long as you like. Choose in 20 seconds.</p>`:[ 'opening','memorize'].includes(phase)?'<button class="primary" id="ready">Ready <span>→</span></button>':[ 'conceal','select'].includes(phase)?`<div class="selection-summary">${state.selected.length?state.selected.map(i=>String.fromCharCode(65+i)).join(' + '):'Choose two'}<span>${state.selected.length}/2</span></div><button class="primary" id="submit" ${phase==='conceal'||state.selected.length!==2?'disabled':''}>${state.roundIndex===ROUND_COUNT-1?'Finish':'Next question'} <span>→</span></button>`:'';
   $('results').hidden=!playing||phase!=='complete';
   if(phase==='complete') renderResults();
@@ -180,7 +211,7 @@ function render() {
   if(nextAnnouncementKey!==announcementKey) {
     const selection=state?.selected.map(i=>String.fromCharCode(65+i)).join(' and ');
     const choosing=phase!==previousPhase||previousScreen==='welcome'||previousScreen==='opening';
-    const announcement=playing&&!introRunning?(phase==='memorize'?'Memorise the cards. Take as long as you need.':phase==='conceal'?'Cards concealed.':phase==='select'?`${choosing?`Question ${state.roundIndex+1} of ${ROUND_COUNT}. Choose two cards. You have 20 seconds.`:''} ${selection?`Selected ${selection}.`:''} ${state.selected.length} of 2 selected.`:phase==='complete'?`All five questions complete. Memorized in ${formatTime(resultInfo().ms)}.`:''):'';
+    const announcement=playing&&!introRunning?(phase==='memorize'?(state.hardMode?'Hard Mode. You have 20 seconds to memorise.':'Memorise the cards. Take as long as you need.'):phase==='conceal'?'Cards concealed.':phase==='select'?`${choosing?`Question ${state.roundIndex+1} of ${ROUND_COUNT}. Choose two cards. You have 20 seconds.`:''} ${selection?`Selected ${selection}.`:''} ${state.selected.length} of 2 selected.`:phase==='complete'?`All five questions complete. Memorized in ${formatTime(resultInfo().ms)}.`:''):'';
     $('announcements').textContent=announcement.trim();
     announcementKey=nextAnnouncementKey;
   }
@@ -266,7 +297,7 @@ async function enterGame() {
     animations.push(card.animate([{transform:'rotateY(180deg)'},{transform:'rotateY(0deg)'}],{...options,delay:reduced?0:i*10}));
   }
   const introAttempt=await newAttemptAfterIntro(number,animations);
-  const freshAttempt=newAttempt(number,introAttempt.startedAt);
+  const freshAttempt=newAttempt(number,introAttempt.startedAt,hardMode);
   animations.forEach(animation=>animation.cancel());
   introRunning=false;
   if(activeNumber!==number) {playing=false;render();return;}
@@ -278,18 +309,22 @@ async function enterGame() {
 }
 function updateClock() {
   const now=Date.now(), phase=state?.phase;
-  $('clock').setAttribute('aria-label',phase==='select'?'Selection time remaining':phase==='conceal'?'Preparing next question':'Elapsed memorisation time');
+  const hardMemory=phase==='memorize'&&state.hardMode;
+  const openingMemory=introRunning&&hardMode;
+  const memoryRemaining=hardMemory?Math.max(0,state.startedAt+MEMORIZATION_TIME-now):0;
+  $('clock').setAttribute('aria-label',hardMemory?'Memorisation time remaining':phase==='select'?'Selection time remaining':phase==='conceal'?'Preparing next question':'Elapsed memorisation time');
   const clockTime=ms=>formatTime(ms).padStart(5,'0');
-  $('clock').textContent=!state?'00:00':phase==='memorize'?clockTime(now-state.startedAt):phase==='select'?clockTime(Math.ceil(Math.max(0,deadline(state)-now)/1000)*1000):phase==='conceal'?'00:01':clockTime(state.memorizedAt-state.startedAt);
+  $('clock').textContent=!state?(openingMemory?'00:20':'00:00'):phase==='memorize'?clockTime(hardMemory?Math.ceil(memoryRemaining/1000)*1000:now-state.startedAt):phase==='select'?clockTime(Math.ceil(Math.max(0,deadline(state)-now)/1000)*1000):phase==='conceal'?'00:01':clockTime(state.memorizedAt-state.startedAt);
   $('clock').classList.toggle('overtime',!!state?.overtime);
   const progress=$('recall-progress');
-  progress.hidden=!['conceal','select'].includes(phase)||!playing;
-  const remaining=state?.roundStartedAt===null?SELECTION_TIME:Math.max(0,(state?deadline(state):0)-now);
+  progress.hidden=!(openingMemory||hardMemory||['conceal','select'].includes(phase))||!playing;
+  progress.setAttribute('aria-label',hardMemory?'Memorisation time remaining':'Time remaining this question');
+  const remaining=openingMemory?MEMORIZATION_TIME:hardMemory?memoryRemaining:state?.roundStartedAt===null?SELECTION_TIME:Math.max(0,(state?deadline(state):0)-now);
   progress.style.setProperty('--remaining',Math.min(1,remaining/SELECTION_TIME));
   progress.setAttribute('aria-valuenow',String(Math.ceil(remaining/1000)));
   const elapsed=1-Math.min(1,remaining/SELECTION_TIME);
   progress.style.setProperty('--bar-color',`rgb(${[74,49,99].map((v,i)=>Math.round(v+([206,178,235][i]-v)*elapsed)).join(' ')})`);
-  progress.classList.toggle('is-urgent',phase==='select'&&remaining<=3000);
+  progress.classList.toggle('is-urgent',(hardMemory||phase==='select')&&remaining<=3000);
   if($('continue-clock')) $('continue-clock').textContent=$('clock').textContent;
   const untilReset=86400000-((now%86400000)+86400000)%86400000;
   const resetText=formatNextDeal(untilReset);
@@ -307,7 +342,7 @@ function renderResults() {
   const placing=!place?'Missed question':place===1?'Best hand':`${place===2?'2nd':place===3?'3rd':`#${place}`} best hand`;
   const roundPlaces=state.answers.map((answer,i)=>{if(answer.selected.length!==2)return 0;const gs=handGroups(deal.board,deal.communities[i]);const h=evaluate([...deal.communities[i],...answer.selected.map(p=>deal.board[p])]);return gs.findIndex(g=>g.score===h.score)+1;});
   const roundHeader=`<nav class="round-tabs" aria-label="Review each question">${roundPlaces.map((p,i)=>`<button class="secondary" data-review-round="${i}" aria-pressed="${i===reviewRound}">${i+1} ${badge(p)}</button>`).join('')}</nav>`;
-  $('results').innerHTML=`${roundHeader}${endlessMode?'<div class="endless-result-actions"><button class="primary" id="endless-next">Next deal</button><button class="secondary" id="endless-replay">Replay deal</button><button class="text-button" id="endless-config">Change difficulty</button></div>':''}<div class="result-card"><div class="result-medal">${badge(place)}</div><div><p class="eyebrow">${placing}${state.overtime?' · OVERTIME':''}</p><h2>${resultLabel}</h2><p class="memorized-time">memorized in ${formatTime(ms)}</p></div></div><div class="result-actions"><button id="copy-result" class="secondary">Copy result</button><button id="share" class="primary">Share <svg class="share-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10H5v11h14V10h-3M12 15V3m-4 4 4-4 4 4"/></svg></button></div><label class="checkbox-label share-link-option"><input id="include-link" type="checkbox" ${includeLink?'checked':''}> Include link</label><div class="section-divider"><span>BEST HANDS</span></div><div class="best-hands">${groups.slice(0,3).map((g,i)=>`<details ${i===0?'open':''}><summary><span>${badge(i+1)} ${labels[i]}</span><span>${g.pairs.length} ${g.pairs.length===1?'pair':'pairs'} <svg class="pairs-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></summary><div class="pair-list">${g.pairs.map(pair=>`<div class="pair"><b>${pair.map(p=>String.fromCharCode(65+p)).join(' + ')}</b><span>${pair.map(p=>`<span class="${[1,2].includes(suit(deal.board[p]))?'red':''}">${cardText(deal.board[p])}</span>`).join(' ')}</span></div>`).join('')}</div></details>`).join('')}</div>${review}`;
+  $('results').innerHTML=`${roundHeader}${endlessMode?'<div class="endless-result-actions"><button class="primary" id="endless-next">Next deal</button><button class="secondary" id="endless-replay">Replay deal</button><button class="text-button" id="endless-config">Change difficulty</button></div>':''}<div class="result-card"><div class="result-medal">${badge(place)}</div><div><p class="eyebrow">${placing}${state.overtime?' · OVERTIME':''}</p><h2>${resultLabel}</h2><p class="memorized-time">memorized in ${formatTime(ms)}${state.hardMode?'*':''}</p></div></div><div class="result-actions"><button id="copy-result" class="secondary">Copy result</button><button id="share" class="primary">Share <svg class="share-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10H5v11h14V10h-3M12 15V3m-4 4 4-4 4 4"/></svg></button></div><label class="checkbox-label share-link-option"><input id="include-link" type="checkbox" ${includeLink?'checked':''}> Include link</label><div class="section-divider"><span>BEST HANDS</span></div><div class="best-hands">${groups.slice(0,3).map((g,i)=>`<details ${i===0?'open':''}><summary><span>${badge(i+1)} ${labels[i]}</span><span>${g.pairs.length} ${g.pairs.length===1?'pair':'pairs'} <svg class="pairs-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></summary><div class="pair-list">${g.pairs.map(pair=>`<div class="pair"><b>${pair.map(p=>String.fromCharCode(65+p)).join(' + ')}</b><span>${pair.map(p=>`<span class="${[1,2].includes(suit(deal.board[p]))?'red':''}">${cardText(deal.board[p])}</span>`).join(' ')}</span></div>`).join('')}</div></details>`).join('')}</div>${review}`;
 }
 function renderUnfinished() {$('unfinished').hidden=true;}
 function reconcile(options={}) {
@@ -332,9 +367,13 @@ function refreshDaily({away=false}={}) {
   return true;
 }
 document.addEventListener('change',event=>{
-  if(event.target.id!=='include-link') return;
-  includeLink=event.target.checked;
-  try {localStorage.setItem(PREFERENCES_KEY,JSON.stringify({includeLink}));} catch { /* Keep this choice for the current session. */ }
+  if(event.target.id==='include-link') includeLink=event.target.checked;
+  else if(event.target.id==='hard-mode') {
+    if(introRunning||state&&state.phase!=='complete') {event.target.checked=!!state?.hardMode;return;}
+    hardMode=event.target.checked;render();
+    setButtonFire(document.querySelector('#endless-form button[type=submit]'),hardMode);
+  } else return;
+  try {localStorage.setItem(PREFERENCES_KEY,JSON.stringify({includeLink,hardMode}));} catch { /* Keep this choice for the current session. */ }
 });
 document.addEventListener('click',event=>{
   const button=event.target.closest('button'); if(!button) return;
@@ -349,7 +388,7 @@ document.addEventListener('click',event=>{
     void enterGame();
   }
   if(button.id==='home') {playing=false;if(state)state.hiddenSince=Date.now();save();render();}
-  if(button.id==='start' && !state) {state=newAttempt(activeNumber);attempts[activeNumber]=state;save({changed:true});render();}
+  if(button.id==='start' && !state) {state=newAttempt(activeNumber,Date.now(),hardMode);attempts[activeNumber]=state;save({changed:true});render();}
   if(button.dataset.reviewRound!==undefined) {reviewRound=Number(button.dataset.reviewRound);render();return;}
   if(button.id==='ready'&&state?.phase==='memorize') {ready(state,Date.now());save({changed:true});render();}
   if(button.dataset.position!==undefined&&state?.phase==='select') {selectCard(state,Number(button.dataset.position));save({changed:true});render();}
@@ -455,31 +494,24 @@ function openModal(title,html,{fullScreen=false}={}) {
 function openHelp() {
   openModal("How to play",helpHTML()+(localDevelopment?`<details class="help-development"><summary>Development</summary><button id="reset-test" class="secondary">Reset this attempt</button><p><a href="${testMode?"./":"?test=16"}">${testMode?"Daily game":"Try 16 cards"}</a></p></details>`:""),{fullScreen:true});
 }
-function goEndless(profile,seed,answers=clearMode?'clear':'standard',settings=lab) {
+function goEndless(profile,seed,answers=clearMode?'clear':'standard',settings=lab,preset=practicePreset) {
   if(settings) profile=0;
   endlessNumber(profile,seed);
-  const params=new URLSearchParams({mode:'endless',difficulty:String(profile),seed:String(seed),answers,play:'1'});
+  const params=new URLSearchParams({mode:'practice',difficulty:String(profile),seed:String(seed),answers,play:'1'});
+  if(preset>=0) params.set('preset',preset);
   if(settings) {params.set('cards',settings.count);params.set('pattern',settings.pattern);params.set('clarity',settings.clarity);}
   if(endlessMode&&((lab&&settings&&practiceKey(lab)===practiceKey(settings))||(!lab&&!settings&&answers===(clearMode?'clear':'standard')))) {save({remove:endlessNumber(profile,seed)});}
   location.href=`?${params}`;
 }
 function openEndless() {
-  const current={...PRESETS[0],count:16};
-  const options=(items,value)=>Object.entries(items).map(([key,label])=>`<option value="${key}" ${String(key)===String(value)?'selected':''}>${label}</option>`).join('');
-  openModal('Endless',`<form id="endless-form" class="endless-form"><p>Mix memory load, suit patterns, and answer clarity. Daily records stay separate.</p><label for="practice-preset">Preset</label><select id="practice-preset" aria-describedby="preset-help"><option value="custom">Custom</option>${[0,1,2,3,6,4,5].map(i=>`<option value="${i}" ${i===0?'selected':''}>${PRESETS[i].name}</option>`).join('')}<option value="legacy">Original daily / early experiment</option></select><p id="preset-help" class="fine-print">Choose a difficulty, or Custom to set cards, arrangement, and answer clarity. Each game starts with a random deal.</p><div id="lab-fields" hidden><label for="practice-count">Cards</label><select id="practice-count">${options({16:'16 cards'},16)}</select><label for="practice-pattern">Arrangement</label><select id="practice-pattern">${options(PATTERNS,current.pattern)}</select><label for="practice-clarity">Answer clarity</label><select id="practice-clarity">${options(CLARITIES,current.clarity)}</select></div><div id="legacy-fields" hidden><label for="endless-difficulty">Difficulty</label><select id="endless-difficulty">${DIFFICULTIES.map((label,i)=>`<option value="${i}" ${i===endless.profile?'selected':''}>${label}</option>`).join('')}</select><label for="endless-answers">Answer style</label><select id="endless-answers"><option value="clear" ${clearMode?'selected':''}>Original obvious-answer experiment</option><option value="standard" ${!clearMode?'selected':''}>Original daily deals</option></select></div><button type="submit" class="primary">Start Timer</button></form>`);
-  $('practice-preset').addEventListener('change',()=>{
-    const value=$('practice-preset').value,legacy=value==='legacy';
-    $('lab-fields').hidden=value!=='custom';$('legacy-fields').hidden=!legacy;
-    if(PRESETS[value]) {const p=PRESETS[value];$('practice-count').value=16;$('practice-pattern').value=p.pattern;$('practice-clarity').value=p.clarity;}
-  });
-  for(const id of ['practice-count','practice-pattern','practice-clarity']) $(id).addEventListener('change',()=>{$('practice-preset').value='custom';});
+  openModal('Practice',`<form id="endless-form" class="endless-form"><p>Choose your difficulty. Daily records stay separate.</p><label for="practice-preset">Difficulty</label><select id="practice-preset" aria-describedby="preset-help">${[0,1,2,3,6,4,5].map(i=>`<option value="${i}" ${i===(practicePreset<0?0:practicePreset)?'selected':''}>${PRESETS[i].name}</option>`).join('')}</select><p id="preset-help" class="fine-print">16 cards. Five questions. A fresh deal every time.</p><button type="submit" class="primary">Start Timer</button></form>`);
+  setButtonFire(document.querySelector('#endless-form button[type=submit]'),hardMode);
   $('endless-form').addEventListener('submit',event=>{
     event.preventDefault();
-    const settings=$('practice-preset').value==='legacy'?null:{count:Number($('practice-count').value),pattern:$('practice-pattern').value,clarity:$('practice-clarity').value};
-    const profile=Number($('endless-difficulty').value),seed=1+Math.floor(Math.random()*MAX_SEED),answers=$('endless-answers').value;
-    if(endlessMode&&profile===endless.profile&&seed===endless.seed&&((lab&&settings&&practiceKey(lab)===practiceKey(settings))||(!lab&&!settings&&answers===(clearMode?'clear':'standard')))) {
-      save({remove:activeNumber});state=null;playing=false;lastPhase='';$('modal').close();render();void enterGame();
-    } else goEndless(profile,seed,answers,settings);
+    const preset=Number($('practice-preset').value);
+    const settings={...PRESETS[preset],count:16};
+    const seed=1+Math.floor(Math.random()*MAX_SEED);
+    goEndless(0,seed,'standard',settings,preset);
   });
 }
 function recordSummary() {
@@ -516,14 +548,12 @@ const copyFeedback=new WeakMap();
 async function share(useNative=true) {
   const button=$(useNative?'share':'copy-result');
   const shareURL=new URL('./',location.href);
-  if(endlessMode) shareURL.search=new URLSearchParams({mode:'endless',difficulty:String(endless.profile),seed:String(endless.seed),answers:clearMode?'clear':'standard'}).toString();
+  if(endlessMode) shareURL.search=new URLSearchParams({mode:'practice',difficulty:String(endless.profile),seed:String(endless.seed),answers:clearMode?'clear':'standard'}).toString();
   if(lab) {shareURL.searchParams.set('cards',lab.count);shareURL.searchParams.set('pattern',lab.pattern);shareURL.searchParams.set('clarity',lab.clarity);}
+  if(endlessMode&&practicePreset>=0) shareURL.searchParams.set('preset',String(practicePreset));
   const url=includeLink?shareURL.href:'';
-  const {ms}=resultInfo();
-  const title=endlessMode?'Memory Poker · Endless':`Memory Poker #${activeNumber}`;
-  const roundBadges=state.answers.map((a,i)=>{if(a.selected.length!==2)return '—';const gs=handGroups(deal.board,deal.communities[i]);const h=evaluate([...deal.communities[i],...a.selected.map(p=>deal.board[p])]);return badge(gs.findIndex(g=>g.score===h.score)+1);}).join('');
-  let text=`${title}\n${roundBadges} · ${formatTime(ms)}${url?'\n'+url:''}`;
-  if(testMode) text=text.replace(title,`${title} · Test`);
+  const title=testMode?'Memory Poker · Test':endlessMode?`Memory Poker · Practice · ${practiceDifficulty}`:`Memory Poker #${activeNumber}`;
+  const text=roundShareText(title,state,deal,url);
   if(useNative) {
     if(!navigator.share) {
       resultFeedback(button,'Use Copy result','Native sharing is unavailable in this browser. Use Copy result instead.');

@@ -109,3 +109,9 @@ The compact interface revision was checked against the live Wordle landing scree
 ## Independent difficulty lab
 
 23 automated tests pass. Practice coverage exercises all 96 card-count/pattern/clarity combinations for validity, deterministic generation, exact suit-pattern grouping, and requested category gaps; seven suggested presets are additionally exercised across seven seeds. Daily generator code is unchanged. Browser verification checks are recorded separately from these generation tests.
+
+## Hard Mode — November 20, 2026
+
+All 38 Node tests pass, including exact memorisation expiry, early Ready, legacy unlimited attempts, hidden/restored memory expiry, and share markers/coin eligibility. The static production build succeeds. In-app browser checks using the isolated QA server verified the main-menu switch and purple flames, preference persistence across reload, the 20-second memory bar, reload at one second remaining, automatic concealment at zero, the first question receiving its full 20 seconds, and the main-menu toggle locking the mode during play. QA uses a controlled clock; physical-device suspension and native screen-reader output were not tested.
+
+Final interface checks verified the seven-preset Practice picker and footer placement. A live-clock Practice game counted down normally. The Hard Mode bar has its own heading row; measured clearance above the cards was 12px on desktop and 6px at 320×568. The settings button was removed; Hard Mode is selected on the main menu. The final 38-test suite and static build pass.

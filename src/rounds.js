@@ -1,8 +1,9 @@
 import {generate as generateV1,seededRandom} from './generator.js';
 import {generatePractice} from './practice.js';
-import {handGroups} from './poker.js';
-import {REVEAL_DELAY,SELECTION_TIME} from './state.js';
+import {evaluate,handGroups} from './poker.js';
+import {formatTime,REVEAL_DELAY,SELECTION_TIME} from './state.js';
 export const ROUND_COUNT=5;
+export const MEMORIZATION_TIME=20000;
 export {SELECTION_TIME};
 
 export function generateRounds(number,settings=null) {
@@ -31,12 +32,13 @@ export function generateRounds(number,settings=null) {
   return {...original,version:2,modifier:pattern,board:base.board,community:communities[0],communities};
 }
 
-export function newAttempt(number,now=Date.now()) {
-  return {number,version:2,phase:'memorize',startedAt:now,memorizedAt:null,selected:[],overtime:false,completedAt:null,hiddenSince:null,roundIndex:0,roundStartedAt:null,answers:[]};
+export function newAttempt(number,now=Date.now(),hardMode=false) {
+  return {number,version:2,hardMode,phase:'memorize',startedAt:now,memorizedAt:null,selected:[],overtime:false,completedAt:null,hiddenSince:null,roundIndex:0,roundStartedAt:null,answers:[]};
 }
 export function ready(state,now) {
   if(state.phase!=='memorize') return;
-  state.memorizedAt=now;state.roundStartedAt=now+REVEAL_DELAY;state.phase='conceal';
+  state.memorizedAt=state.hardMode?Math.min(now,state.startedAt+MEMORIZATION_TIME):now;
+  state.roundStartedAt=state.memorizedAt+REVEAL_DELAY;state.phase='conceal';
 }
 export const deadline=state=>state.roundStartedAt===null?null:state.roundStartedAt+SELECTION_TIME;
 function finishRound(state,now,{timedOut=false,away=false}={}) {
@@ -50,6 +52,11 @@ export function submit(state,now) {
   finishRound(state,now);return true;
 }
 export function advance(state,now,{away=false,restoring=false}={}) {
+  if(state.phase==='memorize'&&state.hardMode&&now>=state.startedAt+MEMORIZATION_TIME) {
+    ready(state,state.startedAt+MEMORIZATION_TIME);
+    // An expired memory stage starts the first question when the player returns.
+    if(away||restoring) {state.roundStartedAt=null;return;}
+  }
   if(!['conceal','select'].includes(state.phase)) return;
   if(state.roundStartedAt===null) {
     if(away) return;
@@ -57,4 +64,16 @@ export function advance(state,now,{away=false,restoring=false}={}) {
   }
   if(now>=state.roundStartedAt) state.phase='select';
   if(now>=deadline(state)) finishRound(state,now,{timedOut:true,away:away||restoring});
+}
+
+export function roundShareText(title,state,deal,url='') {
+  const places=state.answers.map((answer,i)=>{
+    if(answer.selected.length!==2) return 0;
+    const groups=handGroups(deal.board,deal.communities[i]);
+    const hand=evaluate([...deal.communities[i],...answer.selected.map(p=>deal.board[p])]);
+    return groups.findIndex(g=>g.score===hand.score)+1;
+  });
+  const badges=places.map(place=>place?(['🥇','🥈','🥉'][place-1]||'🃏'):'—').join('');
+  const token=state.hardMode&&places.length===ROUND_COUNT&&places.every(place=>place===1)?' 🪙':'';
+  return `${title}\n${badges} · ${formatTime(state.memorizedAt-state.startedAt)}${state.hardMode?'*':''}${token}${url?'\n'+url:''}`;
 }

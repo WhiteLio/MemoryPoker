@@ -2,13 +2,13 @@
 
 Each game has one memorisation stage followed by five timed recall questions.
 
-- Every daily and Endless board has 16 cards.
+- Every daily and Practice board has 16 cards.
 - Memorise the board once, then answer five questions. Each uses three different shared cards; none overlap the board, and all 15 shared cards are distinct.
 - Select two positions per question. Positions may be reused in later questions. The board and all answers stay hidden until question five is finished.
 - Each question has its own 20-second timer and a bar that burns away from left to right. Memorisation has no countdown bar.
 - At expiry, the current selection locks. Fewer than two cards counts as unanswered. If expiry happens away from the game, the next question waits until the game is visible again.
 - Results show best hands found out of five, with per-question review. Saves use a separate namespace and do not alter existing single-question progress.
-- Weekday suit arrangements are retained. Endless settings choose the board and initial hand; the following four questions use varied shared cards, so old clarity labels do not guarantee the same clarity for every question.
+- Weekday suit arrangements are retained. Practice presets choose the board and initial hand; the following four questions use varied shared cards, so old clarity labels do not guarantee the same clarity for every question.
 - The frozen v1 generator and single-question state engine remain available for compatibility and regression checks. `src/rounds.js` owns the current generation and timing.
 
 Run `npm start` and open <http://127.0.0.1:4173/>. `npm test` checks both the legacy rules and current round progression.
@@ -91,25 +91,13 @@ Concrete, violet accents, Korean plaques, near-white cards, and dotted backs dra
 
 This is an independent fan project, not affiliated with or endorsed by Netflix or the show's creators. Original source code is licensed under [MIT](LICENSE). Third-party artwork and fonts retain their existing licenses; see [THIRD_PARTY.md](THIRD_PARTY.md).
 
-## Endless difficulty review
+## Practice mode
 
-Choose Endless on the cover and select a difficulty preset or Custom. Start Timer begins memorization immediately with a random deal. Next deal keeps the settings; Replay deal repeats the same board. Change difficulty reopens the picker. Daily game returns to the daily challenge.
+Choose Practice in the main-menu footer. Pick one of seven difficulties: Beginner, Easy, Moderate, Intermediate, Advanced, Hard, or Expert. Every game uses 16 cards and five questions. Start Timer starts a fresh deal, Next deal retains the difficulty, and Replay deal repeats the board. Practice progress stays separate from daily records.
 
-Endless uses separate saved progress and does not affect daily records or streaks. Shared URLs retain the settings and internal seed for reproducible comparisons.
+Copied and shared results include the difficulty, for example `Memory Poker · Practice · Hard`. Links preserve the difficulty, settings, and seed. Existing Endless URLs remain supported; Custom and the original experiment are no longer offered in the picker. Hard Mode is selected on the main menu and works in Practice too.
 
-### Experimental obvious answers
-
-Endless has an Answer style picker: Original daily deals or Obvious answer (experimental). The latter constructs a royal flush or four of a kind with exactly one winning selection and at least a two-category gap above the next distinct hand group. It preserves grid size and suit layout, including strict-shuffle restrictions. The style is encoded in the URL and uses separate progress. Daily v1 generation is unchanged. This intentionally narrow prototype tests whether clear high-tier combinations feel easier; it is not a final difficulty curve.
-
-After each endless round, Difficulty review shows the best and second-best categories, category gap, number of winning selections, losing pairs in the best category, and shared cards contributing to one best combination (excluding kickers). These are diagnostic signals, not a validated difficulty score. No answers or metrics appear before the result.
-
-### Independent practice controls
-
-Custom exposes independent controls on a fixed 16-card board: columns, rows, diagonals, blocks, mirrored pairs, rings, spiral, or shuffled arrangement; and Very clear, Clear, Competing, or Unrestricted answer clarity. Beginner is the default preset. Difficulty presets set these controls without changing the daily schedule; choose Custom to reveal and adjust them. Each new game picks a random seed internally; the picker does not expose it. Shared URLs retain the seed for reproducibility. Start Timer begins memorization immediately. Original daily profiles and the earlier royal-flush/quads experiment remain available under Original daily / early experiment.
-
-Very clear requires a unique winning pair, trips or better, and a category gap of at least two. Clear requires trips or better and a category gap of at least one. Competing requires at least two distinct hand strengths in the winning category. Unrestricted has no clarity filter. Candidate targets include royal flushes, quads, full houses, flushes, straights, trips, and random hands. Actual distributions depend on card count and suit pattern; these controls are experimental constraints, not validated difficulty ratings or a promise of equal hand-category frequency.
-
-Practice deals use their own deterministic generator and storage keyed by the complete settings. Suit identities are shuffled per seed. Rank positions are shuffled within each suit, so the winning cards do not occupy a fixed point in a pattern. Next deal retains all controls. Shares include the controls and seed.
+Arrangement and answer clarity vary by preset. Clarity filters apply to the first question; the other four questions use varied shared cards. These presets are experimental difficulty settings rather than validated ratings.
 
 ## Browser reliability checks
 
@@ -122,3 +110,9 @@ Use `http://127.0.0.1:4174/?test=16&qa=example` for an isolated repeatable scena
 ## Startup loading
 
 A centred violet spinner stays visible while the initial fonts, background and card images load. Individual assets have a six-second deadline. Optional artwork/fonts can fall back; missing card faces show a Retry screen instead of starting an unreadable game. An independent twelve-second watchdog also covers failed application startup. Static deployments version the page's stylesheets and complete JavaScript module graph together to prevent cached startup-code mismatches.
+
+## Hard Mode
+
+Enable Hard Mode on the main menu before starting a deal. You have a maximum of 20 seconds to memorise the 16 cards, just like the show. Ready can end memorisation sooner; at zero the board hides automatically. The timer starts after the opening animation. Leaving or reloading does not reset it; if it expires away, the first question waits for your return. The mode is locked for an unfinished deal, and existing attempts remain unchanged.
+
+Hard Mode gives Start Timer purple flames (static with reduced motion) and shows a countdown bar during memorisation. Copied/shared results append `*` to the memorisation time, plus 🪙 for five gold answers: `🥇🥇🥇🥇🥇 · 0:20* 🪙`.
