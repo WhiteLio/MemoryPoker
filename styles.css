@@ -129,15 +129,15 @@ details[open]:not([data-closing]):not(.best-hands details) > summary::after { tr
 body[data-screen] .game:is([data-phase=opening],[data-phase=memorize]){height:calc(var(--viewport-height,100dvh) - 52px);min-height:0;grid-template-rows:auto auto 68px;align-content:center}
 @media(max-height:700px){body[data-screen] .game:is([data-phase=opening],[data-phase=memorize]){height:calc(var(--viewport-height,100dvh) - 44px)}}
 .game[data-phase=opening] .action-area{padding-top:22px;visibility:hidden}
-.hard-mode-option { display: grid; gap: 0; justify-items: center; color: var(--ivory); font: 500 13px/1.4 var(--font-display); cursor: pointer; }
+.hard-mode-option { -webkit-tap-highlight-color: transparent; display: grid; gap: 0; justify-items: center; color: var(--ivory); font: 500 13px/1.4 var(--font-display); cursor: pointer; }
 .hard-mode-option > span { display: flex; align-items: center; gap: 10px; min-height: 32px; }
 .hard-mode-option small { color: var(--text-muted); font: var(--type-caption); }
 .hard-mode-option:not(:has(input:checked)) { color: rgb(248 247 242 / 45%); }
 .hard-mode-option:not(:has(input:checked)) small { color: rgb(248 247 242 / 38%); }
 .hard-mode-option input { appearance: none; width: 36px; height: 22px; margin: 0; border: 1px solid #9580a6; border-radius: 20px; background: #211a2b; position: relative; cursor: pointer; flex-shrink: 0; }
-.hard-mode-option input::before { content: ''; position: absolute; width: 14px; height: 14px; top: 3px; left: 3px; border-radius: 50%; background: #b8aebf; transition: transform .2s ease-out; }
-.hard-mode-option input:checked { background: #7441a0; border-color: #d5b1f3; }
-.hard-mode-option input:checked::before { transform: translateX(14px); background: #fbf2ff; }
+.hard-mode-option input::before { content: ''; position: absolute; width: 14px; height: 14px; top: 3px; left: 3px; border-radius: 50%; background: #b8aebf; transition: transform 120ms cubic-bezier(.25,.46,.45,.94); }
+.hard-mode-option input:checked { background: linear-gradient(180deg,#382044,#1c1029 45%,#482054); border-color: #cb91f0; box-shadow: inset 0 -2px 5px #dc90ff55, 0 0 7px #9d38d94d; }
+.hard-mode-option input:checked::before { transform: translateX(14px); background: #f3cfff; box-shadow: 0 0 5px #dc90ff99; }
 .hard-mode-option input:disabled { opacity: .5; cursor: default; }
 .purple-fire {
   position: relative;

@@ -181,7 +181,7 @@ body[data-screen=opening] .site-footer { visibility: hidden; }
 .welcome { --menu-group-gap: 36px; gap: 0; }
 .welcome .masthead { margin-bottom: 12px; }
 .welcome-description { margin-bottom: var(--menu-group-gap); }
-.welcome > .primary { margin-bottom: 10px; }
+.welcome > .primary { margin-bottom: var(--menu-group-gap); }
 .welcome > .hard-mode-option { margin-bottom: var(--menu-group-gap); }
 .welcome footer { gap: 4px; margin-bottom: 20px; color: rgb(248 247 242 / 45%); }
 .welcome .endless-entry-actions { margin-top: 0; }
