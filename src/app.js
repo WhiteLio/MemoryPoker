@@ -6,12 +6,17 @@ import {DIFFICULTIES,MAX_SEED,endlessNumber,endlessSettings} from './endless.js'
 import {challengeNumber} from './generator.js';
 import {generateRounds,ROUND_COUNT,SELECTION_TIME,newAttempt,ready,advance,submit,deadline} from './rounds.js';
 import {face, suit, SUITS, cardText, evaluate, handGroups, handLabels} from './poker.js';
-import {selectCard, formatTime, shareText, shouldReplaceDeal, formatNextDeal} from './state.js';
+import {selectCard, formatTime, shouldReplaceDeal, formatNextDeal} from './state.js';
 import {cardPath,preloadCards} from './cards.js';
 import {helpHTML} from './help.js';
 import {EASE_OUT_QUAD,newAttemptAfterIntro} from './intro.js';
 
 const $=id=>document.getElementById(id);
+// The small viewport stays stable when mobile browser controls expand or collapse.
+const layoutViewport=document.createElement('div');
+layoutViewport.setAttribute('aria-hidden','true');
+layoutViewport.style.cssText='position:fixed;width:0;height:100svh;visibility:hidden;pointer-events:none;contain:strict';
+document.body.append(layoutViewport);
 const localDevelopment=['localhost','127.0.0.1','[::1]'].includes(location.hostname);
 const testMode=localDevelopment&&new URLSearchParams(location.search).get('test')==='16';
 const endlessMode=new URLSearchParams(location.search).get('mode')==='endless';
@@ -146,7 +151,7 @@ function render() {
   $('phase-label').hidden=!text[0]; $('detail').hidden=!text[2];
   if(endlessMode) {$('phase-label').textContent=`${lab?`${lab.count} cards · ${PATTERNS[lab.pattern]}`:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][endless.profile]}`;$('phase-label').hidden=false;}
   if(['conceal','select'].includes(phase)) { $('phase-label').textContent=`Question ${(state?.roundIndex||0)+1} of ${ROUND_COUNT}`;$('phase-label').hidden=false; }
-  if(phase==='memorize') {$('phase-label').textContent='16 cards';$('phase-label').hidden=false;}
+  if(['opening','memorize'].includes(phase)) {$('phase-label').textContent='16 cards';$('phase-label').hidden=false;}
   $('community').hidden=!playing||!['conceal','select','complete'].includes(phase);
   const sharedKey=`${currentRound}:${phase==='conceal'?'back':'face'}`;
   if($('community-cards').dataset.renderKey!==sharedKey) {
@@ -159,7 +164,7 @@ function render() {
   $('board').classList.toggle('full-board',deal.board.length===16);
   $('board').classList.toggle('pair-chosen',['select','complete'].includes(phase)&&visibleSelection.length===2);
   document.querySelector('.game').dataset.phase=phase;
-  $('action-area').innerHTML=phase==='intro'?`<p class="deal-note">${deal.modifier==='columns'?'Suits in columns':deal.modifier==='diagonals'?'Suits on diagonals':'Shuffled'}</p><button class="primary" id="start">Start Timer <span>♠</span></button><p class="fine-print">Study as long as you like. Choose in 20 seconds.</p>`:phase==='memorize'?'<button class="primary" id="ready">Ready <span>→</span></button>':[ 'conceal','select'].includes(phase)?`<div class="selection-summary">${state.selected.length?state.selected.map(i=>String.fromCharCode(65+i)).join(' + '):'Choose two'}<span>${state.selected.length}/2</span></div><button class="primary" id="submit" ${phase==='conceal'||state.selected.length!==2?'disabled':''}>${state.roundIndex===ROUND_COUNT-1?'Finish':'Next question'} <span>→</span></button>`:'';
+  $('action-area').innerHTML=phase==='intro'?`<p class="deal-note">${deal.modifier==='columns'?'Suits in columns':deal.modifier==='diagonals'?'Suits on diagonals':'Shuffled'}</p><button class="primary" id="start">Start Timer <span>♠</span></button><p class="fine-print">Study as long as you like. Choose in 20 seconds.</p>`:[ 'opening','memorize'].includes(phase)?'<button class="primary" id="ready">Ready <span>→</span></button>':[ 'conceal','select'].includes(phase)?`<div class="selection-summary">${state.selected.length?state.selected.map(i=>String.fromCharCode(65+i)).join(' + '):'Choose two'}<span>${state.selected.length}/2</span></div><button class="primary" id="submit" ${phase==='conceal'||state.selected.length!==2?'disabled':''}>${state.roundIndex===ROUND_COUNT-1?'Finish':'Next question'} <span>→</span></button>`:'';
   $('results').hidden=!playing||phase!=='complete';
   if(phase==='complete') renderResults();
   $('status').textContent=storageWarning;
@@ -205,8 +210,7 @@ function render() {
 
 }
 function fitLayout() {
-  const width=window.visualViewport?.width||innerWidth;
-  const height=window.visualViewport?.height||innerHeight;
+  const height=layoutViewport.clientHeight||innerHeight;
   const memorising=(playing||introRunning)&&['intro','opening','memorize'].includes(document.querySelector('.game').dataset.phase);
   const table=document.querySelector('.table');
   const tableStyle=getComputedStyle(table);
@@ -234,7 +238,6 @@ function fitLayout() {
   document.documentElement.style.setProperty('--viewport-height',`${height}px`);
 }
 window.addEventListener('resize',fitLayout);
-window.visualViewport?.addEventListener('resize',fitLayout);
 function animatePhase(phase,previous) {
   if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const cards=[...$('board').querySelectorAll('.card')];
@@ -303,7 +306,7 @@ function renderResults() {
   const review=metrics?`<details class="difficulty-review" open><summary>Difficulty review</summary><dl><dt>Best → second</dt><dd>${metrics.best} → ${metrics.second}</dd><dt>Category gap</dt><dd>${metrics.categoryGap} ${metrics.categoryGap===1?'tier':'tiers'}</dd><dt>Winning pairs</dt><dd>${metrics.winningPairs} / ${metrics.totalPairs}</dd><dt>Same-category rivals</dt><dd>${metrics.sameCategoryPairs} pairs</dd><dt>Shared cards in combination</dt><dd>${metrics.sharedContributors} / 3</dd></dl><p>A larger category gap is a clarity signal, not a measured difficulty score.</p></details>`:'';
   const placing=!place?'Missed question':place===1?'Best hand':`${place===2?'2nd':place===3?'3rd':`#${place}`} best hand`;
   const roundPlaces=state.answers.map((answer,i)=>{if(answer.selected.length!==2)return 0;const gs=handGroups(deal.board,deal.communities[i]);const h=evaluate([...deal.communities[i],...answer.selected.map(p=>deal.board[p])]);return gs.findIndex(g=>g.score===h.score)+1;});
-  const roundHeader=`<div class="round-score"><strong>${roundPlaces.filter(p=>p===1).length} / ${ROUND_COUNT} best hands</strong></div><nav class="round-tabs" aria-label="Review each question">${roundPlaces.map((p,i)=>`<button class="secondary" data-review-round="${i}" aria-pressed="${i===reviewRound}">${i+1} ${badge(p)}</button>`).join('')}</nav>`;
+  const roundHeader=`<nav class="round-tabs" aria-label="Review each question">${roundPlaces.map((p,i)=>`<button class="secondary" data-review-round="${i}" aria-pressed="${i===reviewRound}">${i+1} ${badge(p)}</button>`).join('')}</nav>`;
   $('results').innerHTML=`${roundHeader}${endlessMode?'<div class="endless-result-actions"><button class="primary" id="endless-next">Next deal</button><button class="secondary" id="endless-replay">Replay deal</button><button class="text-button" id="endless-config">Change difficulty</button></div>':''}<div class="result-card"><div class="result-medal">${badge(place)}</div><div><p class="eyebrow">${placing}${state.overtime?' · OVERTIME':''}</p><h2>${resultLabel}</h2><p class="memorized-time">memorized in ${formatTime(ms)}</p></div></div><div class="result-actions"><button id="copy-result" class="secondary">Copy result</button><button id="share" class="primary">Share <svg class="share-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10H5v11h14V10h-3M12 15V3m-4 4 4-4 4 4"/></svg></button></div><label class="checkbox-label share-link-option"><input id="include-link" type="checkbox" ${includeLink?'checked':''}> Include link</label><div class="section-divider"><span>BEST HANDS</span></div><div class="best-hands">${groups.slice(0,3).map((g,i)=>`<details ${i===0?'open':''}><summary><span>${badge(i+1)} ${labels[i]}</span><span>${g.pairs.length} ${g.pairs.length===1?'pair':'pairs'} <svg class="pairs-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></summary><div class="pair-list">${g.pairs.map(pair=>`<div class="pair"><b>${pair.map(p=>String.fromCharCode(65+p)).join(' + ')}</b><span>${pair.map(p=>`<span class="${[1,2].includes(suit(deal.board[p]))?'red':''}">${cardText(deal.board[p])}</span>`).join(' ')}</span></div>`).join('')}</div></details>`).join('')}</div>${review}`;
 }
 function renderUnfinished() {$('unfinished').hidden=true;}
@@ -516,12 +519,11 @@ async function share(useNative=true) {
   if(endlessMode) shareURL.search=new URLSearchParams({mode:'endless',difficulty:String(endless.profile),seed:String(endless.seed),answers:clearMode?'clear':'standard'}).toString();
   if(lab) {shareURL.searchParams.set('cards',lab.count);shareURL.searchParams.set('pattern',lab.pattern);shareURL.searchParams.set('clarity',lab.clarity);}
   const url=includeLink?shareURL.href:'';
-  const {place,ms}=resultInfo();
-  let text=shareText(activeNumber,place,ms,state.overtime,url);
-  if(endlessMode) text=text.replace(`Memory Poker #${activeNumber}`,`Memory Poker · Endless · ${lab?`${lab.count} cards · ${PATTERNS[lab.pattern]} · ${CLARITIES[lab.clarity]}`:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][endless.profile]}`);
+  const {ms}=resultInfo();
+  const title=endlessMode?'Memory Poker · Endless':`Memory Poker #${activeNumber}`;
   const roundBadges=state.answers.map((a,i)=>{if(a.selected.length!==2)return '—';const gs=handGroups(deal.board,deal.communities[i]);const h=evaluate([...deal.communities[i],...a.selected.map(p=>deal.board[p])]);return badge(gs.findIndex(g=>g.score===h.score)+1);}).join('');
-  text=`Memory Poker\n${roundBadges} · ${formatTime(ms)}${url?'\n'+url:''}`;
-  if(testMode) text=text.replace(`Memory Poker #${activeNumber}`,'Memory Poker · Test');
+  let text=`${title}\n${roundBadges} · ${formatTime(ms)}${url?'\n'+url:''}`;
+  if(testMode) text=text.replace(title,`${title} · Test`);
   if(useNative) {
     if(!navigator.share) {
       resultFeedback(button,'Use Copy result','Native sharing is unavailable in this browser. Use Copy result instead.');
