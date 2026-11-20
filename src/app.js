@@ -14,6 +14,7 @@ import {EASE_OUT_QUAD,newAttemptAfterIntro} from './intro.js';
 const $=id=>document.getElementById(id);
 function setButtonFire(button,enabled) {
   if(!button) return;
+  enabled=!!enabled;
   button.classList.toggle('purple-fire',enabled);
   if(button.querySelector('.fire-label')) {
     if(enabled) return;
